@@ -1,0 +1,48 @@
+Columns:
+- 'Dispute Number',
+- 'DLI Number',
+- 'Payment Determination Outcome',
+- 'Default Decision',
+- 'Type of Dispute',
+- 'Provider/Facility Group Name',
+- 'Provider/Facility Name',
+- 'Provider Email Domain',
+- 'Provider/Facility NPI Number',
+- 'Practice/Facility Size',
+- 'Health Plan/Issuer Name',
+- 'Health Plan/Issuer Email Domain',
+- 'Health Plan Type',
+- 'Length of Time to Make Determination',
+- 'IDRE Compensation',
+- 'Dispute Line Item Type',
+- 'Type of Service Code',
+- 'Service Code',
+- 'Place of Service Code',
+- 'Item or Service Description',
+- 'Location of Service',
+- 'Practice/Facility Specialty or Type',
+- 'Provider/Facility Offer as % of QPA',
+- 'Health Plan/Issuer Offer as % of QPA',
+- 'Offer Selected from Provider or Issuer',
+- 'Prevailing Party Offer as % of QPA',
+- 'QPA as Percent of Median QPA',
+- 'Provider/Facility Offer as Percent of Median Provider/Facility Offer Amount',
+- 'Health Plan/Issuer Offer as Percent of Median Health Plan/Issuer Offer Amount',
+- 'Prevailing Offer as Percent of Median Prevailing Offer Amount',
+- 'Initiating Party'
+
+Example data
+	Dispute Number	DLI Number	Payment Determination Outcome	Default Decision	Type of Dispute	Provider/Facility Group Name	Provider/Facility Name	Provider Email Domain	Provider/Facility NPI Number	Practice/Facility Size	Health Plan/Issuer Name	Health Plan/Issuer Email Domain	Health Plan Type	Length of Time to Make Determination	IDRE Compensation	Dispute Line Item Type	Type of Service Code	Service Code	Place of Service Code	Item or Service Description	Location of Service	Practice/Facility Specialty or Type	Provider/Facility Offer as % of QPA	Health Plan/Issuer Offer as % of QPA	Offer Selected from Provider or Issuer	Prevailing Party Offer as % of QPA	QPA as Percent of Median QPA	Provider/Facility Offer as Percent of Median Provider/Facility Offer Amount	Health Plan/Issuer Offer as Percent of Median Health Plan/Issuer Offer Amount	Prevailing Offer as Percent of Median Prevailing Offer Amount	Initiating Party
+0	DISP-180585	DLI - 697658	In Favor of Provider/Facility/AA Provider	Yes	Batched	Sentient Physicians PC	Sentient Physicians PC	specialtycare.net	1306204805	Over 500 Employees	BCBS FL	bcbsfl.com	Fully insured private group health plan	505	$660.00	Batched	CPT	95939	21	Placement of skin electrodes and measurement o...	FL	Intraoperative Neuromonitoring	1,046%	NaN	In Favor of Provider/Facility/AA Provider	1,046%	NaN	NaN	NaN	NaN	Health care provider
+1	DISP-180585	DLI - 697663	In Favor of Provider/Facility/AA Provider	Yes	Batched	Sentient Physicians PC	Sentient Physicians PC	specialtycare.net	1306204805	Over 500 Employees	BCBS FL	bcbsfl.com	Fully insured private group health plan	505	$660.00	Batched	CPT	95939	21	Placement of skin electrodes and measurement o...	FL	Intraoperative Neuromonitoring	1,159%	NaN	In Favor of Provider/Facility/AA Provider	1,159%	NaN	NaN	NaN	NaN	Health care provider
+2	DISP-180585	DLI - 697679	In Favor of Provider/Facility/AA Provider	Yes	Batched	Sentient Physicians PC	Sentient Physicians PC	specialtycare.net	1306204805	Over 500 Employees	BCBS FL	bcbsfl.com	Fully insured private group health plan	505	$660.00	Batched	CPT	95939	21	Placement of skin electrodes and measurement o...	FL	Intraoperative Neuromonitoring	1,235%	NaN	In Favor of Provider/Facility/AA Provider	1,235%	NaN	NaN	NaN	NaN	Health care provider
+3	DISP-180585	DLI - 697670	In Favor of Provider/Facility/AA Provider	Yes	Batched	Sentient Physicians PC	Sentient Physicians PC	specialtycare.net	1306204805	Over 500 Employees	BCBS FL	bcbsfl.com	Fully insured private group health plan	505	$660.00	Batched	CPT	95939	21	Placement of skin electrodes and measurement o...	FL	Intraoperative Neuromonitoring	1,537%	NaN	In Favor of Provider/Facility/AA Provider	1,537%	NaN	NaN	NaN	NaN	Health care provider
+4	DISP-180585	DLI - 697685	In Favor of Provider/Facility/AA Provider	Yes	Batched	Sentient Physicians PC	Sentient Physicians PC	specialtycare.net	1306204805	Over 500 Employees	BCBS FL	bcbsfl.com	Fully insured private group health plan	505	$660.00	Batched	CPT	95939	21	Placement of skin electrodes and measurement o...	FL	Intraoperative Neuromonitoring	1,537%	NaN	In Favor of Provider/Facility/AA Provider	1,537%	NaN	NaN	NaN	NaN	Health care provider
+5	DISP-194923	DLI - 727992	In Favor of Provider/Facility/AA Provider	No	Batched	Houston Radiology Associated	Houston Radiology Associated	radpmg.com	N/R	51-100 Employees	Aetna	aetna.com	Either partially or fully self-insured private...	466	$550.00	Batched	CPT	73090	23	X-ray of forearm, 2 views	TX	Radiology	427%	100%	In Favor of Provider/Facility/AA Provider	427%	85%	42%	40%	42%	Health care provider
+6	DISP-194923	DLI - 728007	In Favor of Provider/Facility/AA Provider	No	Batched	Houston Radiology Associated	Houston Radiology Associated	radpmg.com	N/R	51-100 Employees	Aetna	aetna.com	Either partially or fully self-insured private...	466	$550.00	Batched	CPT	73090	23	X-ray of forearm, 2 views	TX	Radiology	427%	100%	In Favor of Provider/Facility/AA Provider	427%	85%	42%	40%	42%	Health care provider
+7	DISP-196864	DLI - 731924	In Favor of Provider/Facility/AA Provider	No	Batched	Oleander Emergency Medicine Associates, PA	Oleander Emergency Medicine Associates,	agshealth.com	1346515103	20-50 Employees	UMR	clearhs.com	Either partially or fully self-insured private...	467	$660.00	Batched	CPT	99284	23	Emergency department visit with moderate level...	TX	Emergency Medicine	233%	105%	In Favor of Provider/Facility/AA Provider	233%	137%	93%	137%	93%	Health care provider
+8	DISP-196864	DLI - 731925	In Favor of Provider/Facility/AA Provider	No	Batched	Oleander Emergency Medicine Associates, PA	Oleander Emergency Medicine Associates,	agshealth.com	1346515103	20-50 Employees	UMR	clearhs.com	Either partially or fully self-insured private...	467	$660.00	Batched	CPT	99284	23	Emergency department visit with moderate level...	TX	Emergency Medicine	233%	105%	In Favor of Provider/Facility/AA Provider	233%	137%	93%	137%	93%	Health care provider
+9	DISP-198011	DLI - 735608	In Favor of Provider/Facility/AA Provider	No	Single	Montgomery Emergency Group, LLC	Montgomery Emergency Group, LLC	agshealth.com	1861773764	Fewer than 20 Employees	Anthem Blue Cross Blue Shield	anthem.com	No Plan/Issuer Response	465	$395.00	Single	CPT	99284	23	Emergency department visit with moderate level...	GA	Emergency Medicine	300%	102%	In Favor of Provider/Facility/AA Provider	300%	101%	93%	102%	93%	Health care provider
+
+
+IDRE Prices
