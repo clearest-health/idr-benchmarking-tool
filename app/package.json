@@ -1,0 +1,52 @@
+{
+  "name": "idr-benchmarking-app",
+  "version": "1.0.0",
+  "description": "IDR Benchmarking Tool for Healthcare Providers",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.0",
+    "@heroicons/react": "^2.2.0",
+    "@supabase/supabase-js": "^2.47.10",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "15.1.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^2.14.1",
+    "tailwind-merge": "^2.5.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "4.0.0-alpha.36",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "15.1.3",
+    "tailwindcss": "4.0.0-alpha.36",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "healthcare",
+    "idr",
+    "benchmarking",
+    "analytics",
+    "nextjs",
+    "supabase"
+  ],
+  "author": "Clearest Health",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clearest/idr-benchmarking-tool"
+  }
+}
