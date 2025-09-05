@@ -1,0 +1,26 @@
+SUPABASE CONFIGURATION
+=====================
+
+Based on your connection string, here are your details:
+
+Project URL: https://qkrrhpyjgwwhzjmwkbxw.supabase.co
+Project ID: qkrrhpyjgwwhzjmwkbxw
+
+NEXT STEPS:
+===========
+
+1. Get your anon key:
+   - Go to https://supabase.com/dashboard/project/qkrrhpyjgwwhzjmwkbxw/settings/api
+   - Copy the "anon public" key (long JWT token)
+
+2. Create .env.local file in idr-benchmarking-app/:
+   NEXT_PUBLIC_SUPABASE_URL=https://qkrrhpyjgwwhzjmwkbxw.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+
+3. Set up database schema:
+   - Go to https://supabase.com/dashboard/project/qkrrhpyjgwwhzjmwkbxw/sql/new
+   - Copy contents of database_schema.sql and run it
+
+4. Test the connection locally
+
+Let me know when you have the anon key!
