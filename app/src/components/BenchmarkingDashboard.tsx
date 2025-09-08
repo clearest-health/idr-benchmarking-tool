@@ -138,13 +138,13 @@ export default function BenchmarkingDashboard() {
 
   // Auto-select practice when search results come back (for URL parameters)
   useEffect(() => {
-    if (practiceData.length > 0 && practiceName && !selectedPractice) {
+    if (practiceData.length > 0 && practiceName && !selectedPractice && filterOptions.specialties.length > 0) {
       const exactMatch = practiceData.find(p => p.name.toLowerCase() === practiceName.toLowerCase())
       if (exactMatch) {
         handlePracticeSelection(exactMatch.name)
       }
     }
-  }, [practiceData, practiceName, selectedPractice])
+  }, [practiceData, practiceName, selectedPractice, filterOptions.specialties])
 
   // Load filter options on component mount
   useEffect(() => {
@@ -233,12 +233,24 @@ export default function BenchmarkingDashboard() {
         size: practice.size
       })
 
-      // Auto-populate the form fields
+      // Auto-populate the form fields with exact matching
+      const matchedSpecialty = filterOptions.specialties.find(s => 
+        s.toLowerCase() === practice.specialty.toLowerCase()
+      ) || practice.specialty
+
+      const matchedState = filterOptions.states.find(s => 
+        s.code === practice.location || s.name.toLowerCase() === practice.location.toLowerCase()
+      )?.code || practice.location
+
+      const matchedSize = filterOptions.practice_sizes.find(s => 
+        s.toLowerCase() === practice.size.toLowerCase()
+      ) || practice.size
+
       setFilters(prev => ({
         ...prev,
-        specialty: practice.specialty || prev.specialty,
-        state: practice.location || prev.state,
-        practice_size: practice.size || prev.practice_size
+        specialty: matchedSpecialty,
+        state: matchedState,
+        practice_size: matchedSize
       }))
 
       // Track practice selection
@@ -448,7 +460,7 @@ export default function BenchmarkingDashboard() {
                 onChange={(value) => setFilters({...filters, specialty: value || undefined})}
                 disabled={filtersLoading}
                 placeholder={filtersLoading ? 'Loading specialties...' : 'Select Specialty'}
-                data={filterOptions.specialties.slice(0, 50).map(specialty => ({
+                data={filterOptions.specialties.map(specialty => ({
                   value: specialty,
                   label: specialty.length > 40 ? `${specialty.substring(0, 40)}...` : specialty
                 }))}
