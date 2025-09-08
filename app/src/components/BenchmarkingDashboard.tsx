@@ -116,6 +116,42 @@ export default function BenchmarkingDashboard() {
   const [serviceCodeSearch, setServiceCodeSearch] = useState('')
   const [showAllServiceCodes, setShowAllServiceCodes] = useState(false)
 
+  // Load URL parameters on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlPracticeName = urlParams.get('practice_name')
+      const urlSpecialty = urlParams.get('specialty')
+      const urlState = urlParams.get('state')
+      const urlPracticeSize = urlParams.get('practice_size')
+      const urlQuarter = urlParams.get('quarter')
+
+      if (urlPracticeName) {
+        setPracticeName(urlPracticeName)
+        // Trigger search to get practice data and auto-populate fields
+        setTimeout(() => searchPracticeNames(urlPracticeName), 100)
+      }
+      
+      setFilters(prev => ({
+        ...prev,
+        specialty: urlSpecialty || prev.specialty,
+        state: urlState || prev.state,
+        practice_size: urlPracticeSize || prev.practice_size,
+        quarter: urlQuarter || prev.quarter
+      }))
+    }
+  }, [])
+
+  // Auto-select practice when search results come back (for URL parameters)
+  useEffect(() => {
+    if (practiceData.length > 0 && practiceName && !selectedPractice) {
+      const exactMatch = practiceData.find(p => p.name.toLowerCase() === practiceName.toLowerCase())
+      if (exactMatch) {
+        handlePracticeSelection(exactMatch.name)
+      }
+    }
+  }, [practiceData, practiceName, selectedPractice])
+
   // Load filter options on component mount
   useEffect(() => {
     const loadFilterOptions = async () => {
