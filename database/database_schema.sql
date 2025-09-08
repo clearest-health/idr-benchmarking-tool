@@ -229,7 +229,8 @@ CREATE OR REPLACE FUNCTION get_provider_benchmark(
     p_state VARCHAR DEFAULT NULL,
     p_practice_size VARCHAR DEFAULT NULL,
     p_service_codes VARCHAR[] DEFAULT NULL,
-    p_quarter VARCHAR DEFAULT '2024-Q4'
+    p_quarter VARCHAR DEFAULT '2024-Q4',
+    p_practice_name VARCHAR DEFAULT NULL
 ) RETURNS TABLE (
     total_disputes BIGINT,
     provider_win_rate NUMERIC,
@@ -256,7 +257,8 @@ BEGIN
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state)
         AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
-        AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes));
+        AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes))
+        AND (p_practice_name IS NULL OR d.provider_facility_name ILIKE '%' || p_practice_name || '%');
 END;
 $$ LANGUAGE plpgsql;
 

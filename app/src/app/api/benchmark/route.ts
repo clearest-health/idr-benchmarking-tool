@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
       p_state: type === 'provider' ? (filters.state || null) : null,
       p_practice_size: type === 'provider' ? (filters.practice_size || null) : null,
       p_service_codes: filters.service_codes || null,
-      p_quarter: filters.quarter || '2024-Q4'
+      p_quarter: filters.quarter || '2024-Q4',
+      p_practice_name: type === 'provider' ? (filters.practice_name || null) : null
     }
 
     // Call the stored procedure

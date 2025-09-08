@@ -3,14 +3,40 @@
 import { useState, useEffect } from 'react'
 import { BenchmarkingService } from '@/lib/benchmarking'
 import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
+import {
+  Container,
+  Grid,
+  Paper,
+  Title,
+  Text,
+  Select,
+  TextInput,
+  Button,
+  Card,
+  Group,
+  Stack,
+  Badge,
+  Loader,
+  Alert,
+  MultiSelect,
+  Divider,
+  ActionIcon,
+  Tooltip as MantineTooltip,
+  Box,
+  Flex,
+  Autocomplete
+} from '@mantine/core'
 import { 
-  ChartBarIcon, 
-  MapPinIcon, 
-  BuildingOfficeIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  TrophyIcon
-} from '@heroicons/react/24/outline'
+  IconChartBar, 
+  IconMapPin, 
+  IconBuilding,
+  IconClock,
+  IconCurrencyDollar,
+  IconTrophy,
+  IconSearch,
+  IconX,
+  IconAlertCircle
+} from '@tabler/icons-react'
 import {
   BarChart,
   Bar,
@@ -44,6 +70,7 @@ interface FilterOptions {
     state_filter?: string
     total_specialties?: number
     total_service_codes?: number
+    using_sample_data?: boolean
   }
 }
 
@@ -69,7 +96,23 @@ export default function BenchmarkingDashboard() {
   const [loading, setLoading] = useState(false)
   const [filtersLoading, setFiltersLoading] = useState(true)
   const [filtersError, setFiltersError] = useState<string | null>(null)
-  const [practiceName, setPracticeName] = useState('Your Practice')
+  const [practiceName, setPracticeName] = useState('')
+  const [practiceNameSuggestions, setPracticeNameSuggestions] = useState<string[]>([])
+  const [practiceNameLoading, setPracticeNameLoading] = useState(false)
+  const [practiceData, setPracticeData] = useState<Array<{
+    name: string
+    specialty: string
+    location: string
+    size: string
+    disputeCount: number
+    displayName: string
+  }>>([])
+  const [selectedPractice, setSelectedPractice] = useState<{
+    name: string
+    specialty: string
+    location: string
+    size: string
+  } | null>(null)
   const [serviceCodeSearch, setServiceCodeSearch] = useState('')
   const [showAllServiceCodes, setShowAllServiceCodes] = useState(false)
 
@@ -116,6 +159,60 @@ export default function BenchmarkingDashboard() {
     return () => clearTimeout(debounceTimer)
   }, [filters.specialty, filters.state, filters.quarter])
 
+  // Search for practice names
+  const searchPracticeNames = async (query: string) => {
+    if (!query || query.length < 2) {
+      setPracticeNameSuggestions([])
+      setPracticeData([])
+      return
+    }
+
+    try {
+      setPracticeNameLoading(true)
+      const params = new URLSearchParams({
+        q: query,
+        limit: '10'
+      })
+      
+      if (filters.specialty) {
+        params.append('specialty', filters.specialty)
+      }
+
+      const response = await fetch(`/api/practice-search?${params.toString()}`)
+      const data = await response.json()
+
+      if (data.practices) {
+        setPracticeData(data.practices)
+        setPracticeNameSuggestions(data.practices.map((p: any) => p.name))
+      }
+    } catch (error) {
+      console.error('Error searching practice names:', error)
+    } finally {
+      setPracticeNameLoading(false)
+    }
+  }
+
+  // Handle practice selection and auto-populate fields
+  const handlePracticeSelection = (selectedPracticeName: string) => {
+    const practice = practiceData.find(p => p.name === selectedPracticeName)
+    if (practice) {
+      setSelectedPractice({
+        name: practice.name,
+        specialty: practice.specialty,
+        location: practice.location,
+        size: practice.size
+      })
+
+      // Auto-populate the form fields
+      setFilters(prev => ({
+        ...prev,
+        specialty: practice.specialty || prev.specialty,
+        state: practice.location || prev.state,
+        practice_size: practice.size || prev.practice_size
+      }))
+    }
+  }
+
   const runBenchmarkAnalysis = async () => {
     if (!filters.specialty) {
       alert('Please select a specialty to run the analysis')
@@ -124,9 +221,15 @@ export default function BenchmarkingDashboard() {
 
     setLoading(true)
     try {
+      // Include practice name in filters for provider-specific analysis
+      const providerFilters = {
+        ...filters,
+        practice_name: practiceName.trim() || undefined
+      }
+
       const [providerData, peerData] = await Promise.all([
-        BenchmarkingService.getProviderBenchmark(filters),
-        BenchmarkingService.getPeerBenchmark(filters)
+        BenchmarkingService.getProviderBenchmark(providerFilters),
+        BenchmarkingService.getPeerBenchmark(filters) // Keep peer comparison broad (no practice name filter)
       ])
 
       if (!providerData || !peerData) {
@@ -175,352 +278,343 @@ export default function BenchmarkingDashboard() {
   const COLORS = ['#2E8B57', '#4682B4']
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Box bg="gray.0" mih="100vh">
       {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <ChartBarIcon className="h-8 w-8 text-green-600 mr-3" />
-              IDR Benchmarking Tool
-            </h1>
-            <p className="mt-2 text-gray-600">
-              Compare your IDR performance against peer providers
-            </p>
-          </div>
-        </div>
-      </div>
+      <Paper shadow="sm" mb="lg">
+        <Container size="xl" py="xl">
+          <Group align="center">
+            <IconChartBar size={32} color="var(--mantine-color-green-6)" />
+            <div>
+              <Title order={1} size="h1" c="gray.9">
+                IDR Benchmarking Tool
+              </Title>
+              <Text size="sm" c="gray.6" mt={4}>
+                Compare your IDR performance against peer providers
+              </Text>
+            </div>
+          </Group>
+        </Container>
+      </Paper>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
+      <Container size="xl" py="lg">
+        <Grid>
           {/* Sidebar - Filters */}
-          <div className="lg:col-span-1">
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <Grid.Col span={{ base: 12, lg: 3 }}>
+            <Paper shadow="sm" p="lg">
+              <Title order={2} size="lg" c="gray.9" mb="md">
                 🎯 Define Your Practice Profile
-              </h2>
+              </Title>
               
               {filtersError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600 font-medium">⚠️ Configuration Issue</p>
-                  <p className="text-sm text-red-600 mt-1">{filtersError}</p>
+                <Alert 
+                  icon={<IconAlertCircle size="1rem" />} 
+                  title="⚠️ Configuration Issue" 
+                  color="red" 
+                  mb="md"
+                >
+                  <Text size="sm">{filtersError}</Text>
                   {filtersError.includes('Database not configured') && (
-                    <div className="mt-2 text-xs text-red-500">
-                      <p>To fix this:</p>
-                      <ol className="list-decimal list-inside mt-1 space-y-1">
-                        <li>Create <code className="bg-red-100 px-1 rounded">.env.local</code> file in the app directory</li>
+                    <Box mt="xs">
+                      <Text size="xs" c="red">To fix this:</Text>
+                      <Text size="xs" c="red" component="ol" style={{ listStyleType: 'decimal', paddingLeft: '1rem' }}>
+                        <li>Create <code style={{ backgroundColor: 'var(--mantine-color-red-1)', padding: '2px 4px', borderRadius: '4px' }}>.env.local</code> file in the app directory</li>
                         <li>Add your Supabase URL and anon key</li>
                         <li>Restart the development server</li>
-                      </ol>
-                    </div>
+                      </Text>
+                    </Box>
                   )}
-                </div>
+                </Alert>
               )}
               
               {/* Practice Name */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Practice Name
-                </label>
-                <input
-                  type="text"
-                  value={practiceName}
-                  onChange={(e) => setPracticeName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Your Practice"
-                />
-              </div>
+              <Autocomplete
+                label="Practice Name (Optional)"
+                value={practiceName}
+                onChange={(value) => {
+                  setPracticeName(value)
+                  // Handle selection from dropdown
+                  if (practiceNameSuggestions.includes(value)) {
+                    handlePracticeSelection(value)
+                  }
+                  // Debounce the search
+                  if (value && value.length >= 2) {
+                    setTimeout(() => searchPracticeNames(value), 300)
+                  } else {
+                    setPracticeNameSuggestions([])
+                    setPracticeData([])
+                    setSelectedPractice(null)
+                  }
+                }}
+                onFocus={() => {
+                  if (practiceName && practiceName.length >= 2) {
+                    searchPracticeNames(practiceName)
+                  }
+                }}
+                data={practiceNameSuggestions}
+                placeholder="Enter practice or facility name..."
+                mb="md"
+                description={selectedPractice 
+                  ? `Selected: ${selectedPractice.name} - Fields auto-populated below`
+                  : "Search for a specific practice/facility name to auto-populate other fields. Leave blank for broader analysis."
+                }
+                rightSection={practiceNameLoading ? <Loader size="xs" /> : undefined}
+                limit={10}
+                maxDropdownHeight={200}
+              />
 
               {/* Specialty */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Practice Specialty *
-                </label>
-                <select
-                  value={filters.specialty || ''}
-                  onChange={(e) => setFilters({...filters, specialty: e.target.value})}
-                  disabled={filtersLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">
-                    {filtersLoading ? 'Loading specialties...' : 'Select Specialty'}
-                  </option>
-                  {filterOptions.specialties.slice(0, 50).map(specialty => (
-                    <option key={specialty} value={specialty}>
-                      {specialty.length > 40 ? `${specialty.substring(0, 40)}...` : specialty}
-                    </option>
-                  ))}
-                </select>
-                {filterOptions.metadata?.total_specialties && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {filterOptions.metadata.total_specialties} specialties available
-                    {filterOptions.metadata?.using_sample_data && (
-                      <span className="text-orange-600 ml-1">(sample data - database empty)</span>
-                    )}
-                  </p>
-                )}
-              </div>
+              <Select
+                label="Practice Specialty *"
+                value={filters.specialty || null}
+                onChange={(value) => setFilters({...filters, specialty: value || undefined})}
+                disabled={filtersLoading}
+                placeholder={filtersLoading ? 'Loading specialties...' : 'Select Specialty'}
+                data={filterOptions.specialties.slice(0, 50).map(specialty => ({
+                  value: specialty,
+                  label: specialty.length > 40 ? `${specialty.substring(0, 40)}...` : specialty
+                }))}
+                searchable
+                clearable
+                mb="md"
+                description={filterOptions.metadata?.total_specialties ? 
+                  `${filterOptions.metadata.total_specialties} specialties available${
+                    filterOptions.metadata?.using_sample_data ? ' (sample data - database empty)' : ''
+                  }` : undefined
+                }
+              />
 
               {/* State */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MapPinIcon className="h-4 w-4 inline mr-1" />
-                  Geographic Location
-                </label>
-                <select
-                  value={filters.state || ''}
-                  onChange={(e) => setFilters({...filters, state: e.target.value})}
-                  disabled={filtersLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">
-                    {filtersLoading ? 'Loading states...' : 'All States'}
-                  </option>
-                  {filterOptions.states.map(state => (
-                    <option key={state.code} value={state.code}>
-                      {state.display}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label={
+                  <Group gap="xs">
+                    <IconMapPin size={16} />
+                    <Text>Geographic Location</Text>
+                  </Group>
+                }
+                value={filters.state || null}
+                onChange={(value) => setFilters({...filters, state: value || undefined})}
+                disabled={filtersLoading}
+                placeholder={filtersLoading ? 'Loading states...' : 'All States (Optional)'}
+                data={filterOptions.states.map(state => ({
+                  value: state.code,
+                  label: state.display
+                }))}
+                searchable
+                clearable
+                mb="md"
+                description="Leave blank to compare against all geographic locations"
+              />
 
               {/* Practice Size */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <BuildingOfficeIcon className="h-4 w-4 inline mr-1" />
-                  Practice Size
-                </label>
-                <select
-                  value={filters.practice_size || ''}
-                  onChange={(e) => setFilters({...filters, practice_size: e.target.value})}
-                  disabled={filtersLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">
-                    {filtersLoading ? 'Loading sizes...' : 'All Sizes'}
-                  </option>
-                  {filterOptions.practice_sizes.map(size => (
-                    <option key={size} value={size}>{size}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label={
+                  <Group gap="xs">
+                    <IconBuilding size={16} />
+                    <Text>Practice Size</Text>
+                  </Group>
+                }
+                value={filters.practice_size || null}
+                onChange={(value) => setFilters({...filters, practice_size: value || undefined})}
+                disabled={filtersLoading}
+                placeholder={filtersLoading ? 'Loading sizes...' : 'All Sizes (Optional)'}
+                data={filterOptions.practice_sizes.map(size => ({
+                  value: size,
+                  label: size
+                }))}
+                clearable
+                mb="md"
+                description="Leave blank to compare against all practice sizes"
+              />
 
               {/* Service Codes */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Focus Procedures (Optional)
+              <Stack gap="xs" mb="xl">
+                <Text size="sm" fw={500} c="gray.7">
+                  Focus Procedures
                   {filters.specialty && (
-                    <span className="text-green-600 text-xs ml-1">
+                    <Text span size="xs" c="green.6" ml="xs">
                       (filtered by {filters.specialty.substring(0, 20)}...)
-                    </span>
+                    </Text>
                   )}
-                </label>
+                </Text>
                 
-                {/* Search box for service codes */}
-                <div className="mb-2">
-                  <input
-                    type="text"
-                    placeholder="Search procedures..."
-                    value={serviceCodeSearch}
-                    onChange={(e) => setServiceCodeSearch(e.target.value)}
-                    className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
-                </div>
-
-                {/* Selected service codes display */}
-                {filters.service_codes && filters.service_codes.length > 0 && (
-                  <div className="mb-2 p-2 bg-green-50 rounded-md">
-                    <p className="text-xs text-green-700 mb-1">Selected procedures:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {filters.service_codes.map(code => (
-                        <span
-                          key={code}
-                          className="inline-flex items-center px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
-                        >
-                          {code}
-                          <button
-                            onClick={() => {
-                              const updated = filters.service_codes?.filter(c => c !== code) || []
-                              setFilters({...filters, service_codes: updated})
-                            }}
-                            className="ml-1 hover:text-green-600"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <select
-                  multiple
+                <MultiSelect
+                  placeholder="Search and select procedures..."
                   value={filters.service_codes || []}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value)
-                    setFilters({...filters, service_codes: selected})
-                  }}
+                  onChange={(value) => setFilters({...filters, service_codes: value})}
                   disabled={filtersLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 h-32 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
-                >
-                  {filterOptions.top_service_codes
-                    .filter(code => 
-                      !serviceCodeSearch || 
-                      code.service_code.toLowerCase().includes(serviceCodeSearch.toLowerCase()) ||
-                      code.description?.toLowerCase().includes(serviceCodeSearch.toLowerCase())
-                    )
+                  data={filterOptions.top_service_codes
                     .slice(0, showAllServiceCodes ? 100 : 30)
-                    .map(code => (
-                      <option key={code.service_code} value={code.service_code}>
-                        {code.service_code} - {code.description?.substring(0, 30)}... 
-                        (Win: {code.provider_win_rate?.toFixed(0)}%, Cases: {code.dispute_count})
-                      </option>
-                    ))
+                    .map(code => ({
+                      value: code.service_code,
+                      label: `${code.service_code} - ${code.description?.substring(0, 30)}... (Win: ${code.provider_win_rate?.toFixed(0)}%, Cases: ${code.dispute_count})`
+                    }))
                   }
-                </select>
+                  searchable
+                  clearable
+                  hidePickedOptions
+                  maxDropdownHeight={200}
+                />
                 
-                <div className="text-xs text-gray-500 mt-1 space-y-1">
-                  <p>Hold Ctrl/Cmd to select multiple</p>
-                  {filterOptions.metadata?.total_service_codes && (
-                    <div className="flex justify-between items-center">
-                      <span>
-                        Showing {Math.min(showAllServiceCodes ? 100 : 30, filterOptions.metadata.total_service_codes)} of {filterOptions.metadata.total_service_codes} procedures
-                      </span>
-                      {filterOptions.metadata.total_service_codes > 30 && (
-                        <button
-                          onClick={() => setShowAllServiceCodes(!showAllServiceCodes)}
-                          className="text-green-600 hover:text-green-700 underline"
-                        >
-                          {showAllServiceCodes ? 'Show Less' : 'Show More'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+                {filterOptions.metadata?.total_service_codes && (
+                  <Group justify="space-between">
+                    <Text size="xs" c="gray.5">
+                      Showing {Math.min(showAllServiceCodes ? 100 : 30, filterOptions.metadata.total_service_codes)} of {filterOptions.metadata.total_service_codes} procedures
+                    </Text>
+                    {filterOptions.metadata.total_service_codes > 30 && (
+                      <Button
+                        variant="subtle"
+                        size="compact-xs"
+                        onClick={() => setShowAllServiceCodes(!showAllServiceCodes)}
+                        color="green"
+                      >
+                        {showAllServiceCodes ? 'Show Less' : 'Show More'}
+                      </Button>
+                    )}
+                  </Group>
+                )}
+              </Stack>
 
               {/* Run Analysis Button */}
-              <button
+              <Button
                 onClick={runBenchmarkAnalysis}
                 disabled={loading || !filters.specialty}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                loading={loading}
+                color="green"
+                size="md"
+                fullWidth
+                leftSection={!loading ? '🚀' : undefined}
               >
-                {loading ? 'Analyzing...' : '🚀 Run Benchmarking Analysis'}
-              </button>
-            </div>
-          </div>
+                {loading ? 'Analyzing...' : 'Run Benchmarking Analysis'}
+              </Button>
+            </Paper>
+          </Grid.Col>
 
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <Grid.Col span={{ base: 12, lg: 9 }}>
             {!providerMetrics ? (
               // Welcome State
-              <div className="bg-white shadow rounded-lg p-8 text-center">
-                <TrophyIcon className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              <Paper shadow="sm" p="xl" ta="center">
+                <IconTrophy size={64} color="var(--mantine-color-green-6)" style={{ margin: '0 auto 1rem' }} />
+                <Title order={2} size="h2" c="gray.9" mb="md">
                   Welcome to IDR Benchmarking
-                </h2>
-                <div className="max-w-2xl mx-auto text-gray-600 space-y-4">
-                  <p className="text-lg">
+                </Title>
+                <Box maw={800} mx="auto" c="gray.6">
+                  <Text size="lg" mb="xl">
                     We've been studying IDR outcomes and have identified patterns in why some groups lose or waste money in arbitration.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-blue-900 mb-2">📊 Compare Performance</h3>
-                      <p className="text-blue-700 text-sm">See how your win rates stack up against similar providers</p>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-green-900 mb-2">💰 Optimize Offers</h3>
-                      <p className="text-green-700 text-sm">Identify opportunities where you may be leaving money on the table</p>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-purple-900 mb-2">🎯 Strategic Insights</h3>
-                      <p className="text-purple-700 text-sm">Make data-driven decisions about which claims to pursue</p>
-                    </div>
-                    <div className="bg-orange-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-orange-900 mb-2">⏱️ Save Time</h3>
-                      <p className="text-orange-700 text-sm">Understand what works for high-performing peers</p>
-                    </div>
-                  </div>
-                  <p className="text-green-600 font-medium mt-6">
+                  </Text>
+                  <Grid mt="xl">
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Card bg="blue.0" p="md">
+                        <Title order={3} size="md" c="blue.9" mb="xs">📊 Compare Performance</Title>
+                        <Text size="sm" c="blue.7">See how your win rates stack up against similar providers</Text>
+                      </Card>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Card bg="green.0" p="md">
+                        <Title order={3} size="md" c="green.9" mb="xs">💰 Optimize Offers</Title>
+                        <Text size="sm" c="green.7">Identify opportunities where you may be leaving money on the table</Text>
+                      </Card>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Card bg="violet.0" p="md">
+                        <Title order={3} size="md" c="violet.9" mb="xs">🎯 Strategic Insights</Title>
+                        <Text size="sm" c="violet.7">Make data-driven decisions about which claims to pursue</Text>
+                      </Card>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Card bg="orange.0" p="md">
+                        <Title order={3} size="md" c="orange.9" mb="xs">⏱️ Save Time</Title>
+                        <Text size="sm" c="orange.7">Understand what works for high-performing peers</Text>
+                      </Card>
+                    </Grid.Col>
+                  </Grid>
+                  <Text c="green.6" fw={500} mt="xl">
                     👈 Get started by selecting your practice profile in the sidebar
-                  </p>
-                </div>
-              </div>
+                  </Text>
+                </Box>
+              </Paper>
             ) : (
               // Results State
-              <div className="space-y-6">
+              <Stack gap="lg">
                 {/* Performance Summary */}
-                <div className="bg-white shadow rounded-lg p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    📊 Performance Summary: {practiceName}
-                  </h2>
+                <Paper shadow="sm" p="lg">
+                  <Title order={2} size="xl" c="gray.9" mb="md">
+                    📊 Performance Summary: {practiceName.trim() || 'Your Practice'}
+                  </Title>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="flex items-center">
-                        <TrophyIcon className="h-8 w-8 text-green-600" />
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-green-900">Win Rate</p>
-                          <p className="text-2xl font-bold text-green-600">
-                            {providerMetrics.provider_win_rate.toFixed(1)}%
-                          </p>
-                          <p className="text-xs text-green-700">
-                            {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
-                            {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  <Grid>
+                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
+                      <Card bg="green.0" p="md">
+                        <Group align="center">
+                          <IconTrophy size={32} color="var(--mantine-color-green-6)" />
+                          <div>
+                            <Text size="sm" fw={500} c="green.9">Win Rate</Text>
+                            <Text size="xl" fw={700} c="green.6">
+                              {providerMetrics.provider_win_rate.toFixed(1)}%
+                            </Text>
+                            <Text size="xs" c="green.7">
+                              {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
+                              {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
+                            </Text>
+                          </div>
+                        </Group>
+                      </Card>
+                    </Grid.Col>
 
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="flex items-center">
-                        <CurrencyDollarIcon className="h-8 w-8 text-blue-600" />
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-blue-900">Avg Offer</p>
-                          <p className="text-2xl font-bold text-blue-600">
-                            {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
-                          </p>
-                          <p className="text-xs text-blue-700">QPA</p>
-                        </div>
-                      </div>
-                    </div>
+                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
+                      <Card bg="blue.0" p="md">
+                        <Group align="center">
+                          <IconCurrencyDollar size={32} color="var(--mantine-color-blue-6)" />
+                          <div>
+                            <Text size="sm" fw={500} c="blue.9">Avg Offer</Text>
+                            <Text size="xl" fw={700} c="blue.6">
+                              {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
+                            </Text>
+                            <Text size="xs" c="blue.7">QPA</Text>
+                          </div>
+                        </Group>
+                      </Card>
+                    </Grid.Col>
 
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <div className="flex items-center">
-                        <ClockIcon className="h-8 w-8 text-purple-600" />
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-purple-900">Resolution</p>
-                          <p className="text-2xl font-bold text-purple-600">
-                            {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
-                          </p>
-                          <p className="text-xs text-purple-700">days</p>
-                        </div>
-                      </div>
-                    </div>
+                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
+                      <Card bg="violet.0" p="md">
+                        <Group align="center">
+                          <IconClock size={32} color="var(--mantine-color-violet-6)" />
+                          <div>
+                            <Text size="sm" fw={500} c="violet.9">Resolution</Text>
+                            <Text size="xl" fw={700} c="violet.6">
+                              {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
+                            </Text>
+                            <Text size="xs" c="violet.7">days</Text>
+                          </div>
+                        </Group>
+                      </Card>
+                    </Grid.Col>
 
-                    <div className="bg-orange-50 p-4 rounded-lg">
-                      <div className="flex items-center">
-                        <ChartBarIcon className="h-8 w-8 text-orange-600" />
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-orange-900">Disputes</p>
-                          <p className="text-2xl font-bold text-orange-600">
-                            {providerMetrics.total_disputes.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-orange-700">analyzed</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
+                      <Card bg="orange.0" p="md">
+                        <Group align="center">
+                          <IconChartBar size={32} color="var(--mantine-color-orange-6)" />
+                          <div>
+                            <Text size="sm" fw={500} c="orange.9">Disputes</Text>
+                            <Text size="xl" fw={700} c="orange.6">
+                              {providerMetrics.total_disputes.toLocaleString()}
+                            </Text>
+                            <Text size="xs" c="orange.7">analyzed</Text>
+                          </div>
+                        </Group>
+                      </Card>
+                    </Grid.Col>
+                  </Grid>
+                </Paper>
 
                 {/* Charts */}
-                <div className="bg-white shadow rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <Paper shadow="sm" p="lg">
+                  <Title order={3} size="lg" c="gray.9" mb="md">
                     📈 Performance Comparison
-                  </h3>
+                  </Title>
                   
-                  <div className="h-80">
+                  <Box h={320}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -531,69 +625,77 @@ export default function BenchmarkingDashboard() {
                         <Bar dataKey="Peer Average" fill="#4682B4" />
                       </BarChart>
                     </ResponsiveContainer>
-                  </div>
-                </div>
+                  </Box>
+                </Paper>
 
                 {/* Insights */}
-                <div className="bg-white shadow rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <Paper shadow="sm" p="lg">
+                  <Title order={3} size="lg" c="gray.9" mb="md">
                     💡 Key Insights & Recommendations
-                  </h3>
+                  </Title>
                   
-                  <div className="space-y-4">
+                  <Stack gap="sm">
                     {insights.map((insight, index) => (
-                      <div
+                      <Alert
                         key={index}
-                        className={`p-4 rounded-lg border-l-4 ${
+                        color={
                           insight.type === 'success' 
-                            ? 'bg-green-50 border-green-400' 
+                            ? 'green' 
                             : insight.type === 'warning'
-                            ? 'bg-yellow-50 border-yellow-400'
-                            : 'bg-blue-50 border-blue-400'
-                        }`}
+                            ? 'yellow'
+                            : 'blue'
+                        }
+                        title={insight.title}
+                        variant="light"
                       >
-                        <h4 className="font-semibold mb-2">{insight.title}</h4>
-                        <p className="text-sm">{insight.message}</p>
-                      </div>
+                        <Text size="sm">{insight.message}</Text>
+                      </Alert>
                     ))}
-                  </div>
-                </div>
+                  </Stack>
+                </Paper>
 
                 {/* Analysis Parameters */}
-                <div className="bg-white shadow rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <Paper shadow="sm" p="lg">
+                  <Title order={3} size="lg" c="gray.9" mb="md">
                     🎯 Analysis Parameters
-                  </h3>
+                  </Title>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Your Practice Profile:</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• Specialty: {filters.specialty}</li>
-                        <li>• Location: {filters.state || 'All States'}</li>
-                        <li>• Size: {filters.practice_size || 'All Sizes'}</li>
-                        {filters.service_codes && filters.service_codes.length > 0 && (
-                          <li>• Service Codes: {filters.service_codes.slice(0, 3).join(', ')}{filters.service_codes.length > 3 ? '...' : ''}</li>
-                        )}
-                      </ul>
-                    </div>
+                  <Grid>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Box>
+                        <Title order={4} size="md" c="gray.9" mb="xs">Your Practice Profile:</Title>
+                        <Text size="sm" c="gray.6" component="ul" style={{ listStyleType: 'none', padding: 0 }}>
+                          <li>• Specialty: {filters.specialty}</li>
+                          <li>• Location: {filters.state || 'All States (not specified)'}</li>
+                          <li>• Size: {filters.practice_size || 'All Sizes (not specified)'}</li>
+                          {practiceName.trim() && (
+                            <li>• Practice Name: "{practiceName.trim()}"</li>
+                          )}
+                          {filters.service_codes && filters.service_codes.length > 0 && (
+                            <li>• Service Codes: {filters.service_codes.slice(0, 3).join(', ')}{filters.service_codes.length > 3 ? '...' : ''}</li>
+                          )}
+                        </Text>
+                      </Box>
+                    </Grid.Col>
                     
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Peer Comparison Group:</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• Same specialty: {filters.specialty}</li>
-                        <li>• All locations (broader scope)</li>
-                        <li>• All practice sizes</li>
-                        <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Box>
+                        <Title order={4} size="md" c="gray.9" mb="xs">Peer Comparison Group:</Title>
+                        <Text size="sm" c="gray.6" component="ul" style={{ listStyleType: 'none', padding: 0 }}>
+                          <li>• Same specialty: {filters.specialty}</li>
+                          <li>• All locations (broader scope)</li>
+                          <li>• All practice sizes</li>
+                          <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
+                        </Text>
+                      </Box>
+                    </Grid.Col>
+                  </Grid>
+                </Paper>
+              </Stack>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </Grid.Col>
+        </Grid>
+      </Container>
+    </Box>
   )
 }
