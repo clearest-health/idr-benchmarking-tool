@@ -365,7 +365,9 @@ export default function BenchmarkingDashboard() {
     }
   ] : []
 
-  const COLORS = ['#2E8B57', '#4682B4']
+  // Consistent colors across all charts
+  const PRACTICE_COLOR = '#2E8B57' // Green for Your Practice
+  const PEER_COLOR = '#4682B4'     // Blue for Peer Average
 
   return (
     <Box bg="gray.0" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -671,7 +673,11 @@ export default function BenchmarkingDashboard() {
                               <XAxis dataKey="name" fontSize={12} />
                               <YAxis domain={[0, 100]} />
                               <Tooltip formatter={(value) => [`${value}%`, 'Win Rate']} />
-                              <Bar dataKey="value" fill="#2E8B57" />
+                              <Bar dataKey="value">
+                                {winRateData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
+                                ))}
+                              </Bar>
                             </BarChart>
                           </ResponsiveContainer>
                         </Box>
@@ -691,7 +697,11 @@ export default function BenchmarkingDashboard() {
                               <XAxis dataKey="name" fontSize={12} />
                               <YAxis />
                               <Tooltip formatter={(value) => [`${value}%`, 'Offer % QPA']} />
-                              <Bar dataKey="value" fill="#4682B4" />
+                              <Bar dataKey="value">
+                                {offerData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
+                                ))}
+                              </Bar>
                             </BarChart>
                           </ResponsiveContainer>
                         </Box>
@@ -711,7 +721,11 @@ export default function BenchmarkingDashboard() {
                               <XAxis dataKey="name" fontSize={12} />
                               <YAxis />
                               <Tooltip formatter={(value) => [`${value}`, 'Days']} />
-                              <Bar dataKey="value" fill="#9333ea" />
+                              <Bar dataKey="value">
+                                {resolutionData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
+                                ))}
+                              </Bar>
                             </BarChart>
                           </ResponsiveContainer>
                         </Box>
