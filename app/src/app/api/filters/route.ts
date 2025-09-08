@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       table: ['idr_disputes', 'disputes', 'idr_data', 'federal_idr_disputes'][i],
       exists: !test.error,
       error: test.error?.message,
-      hasData: test.data?.length > 0
+      hasData: test.data?.length ? test.data.length > 0 : false
     })))
     
     const quartersCheck = await supabase
@@ -231,8 +231,6 @@ export async function GET(request: Request) {
         using_sample_data: isDatabaseEmpty && specialties.length === 0,
         debug_info: {
           quarters_found: quartersCheck.data?.map(q => q.data_quarter) || [],
-          specialties_query_error: specialtiesRes.error?.message,
-          service_codes_query_error: serviceCodesRes.error?.message,
           raw_quarters_count: quartersCheck.data?.length || 0,
           migration_needed: isDatabaseEmpty,
           connection_test: {
@@ -249,7 +247,7 @@ export async function GET(request: Request) {
             table: ['idr_disputes', 'disputes', 'idr_data', 'federal_idr_disputes'][i],
             exists: !test.error,
             error: test.error?.message,
-            hasData: test.data?.length > 0
+            hasData: test.data?.length ? test.data.length > 0 : false
           }))
         }
       }
