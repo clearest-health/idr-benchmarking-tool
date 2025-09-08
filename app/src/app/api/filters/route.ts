@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: Request) {
   try {
@@ -10,12 +10,18 @@ export async function GET(request: Request) {
 
     // Check if Supabase is properly configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !supabaseKey || supabaseKey.includes('placeholder')) {
+    console.log('🔍 Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      serviceKeyLength: supabaseServiceKey?.length || 0
+    })
+
+    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !supabaseServiceKey || supabaseServiceKey.includes('placeholder')) {
       console.error('❌ Supabase not configured properly')
       return NextResponse.json({
-        error: 'Database not configured. Please set up NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local',
+        error: 'Database not configured. Please set up NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY',
         specialties: [],
         states: [],
         practice_sizes: [],
@@ -29,67 +35,10 @@ export async function GET(request: Request) {
       })
     }
 
-    // First, let's check what quarters are available
-    console.log('🔍 Testing Supabase connection...')
-    
-    // Test basic connection
-    const connectionTest = await supabase
-      .from('idr_disputes')
-      .select('count', { count: 'exact', head: true })
-    
-    console.log('Connection test result:', connectionTest)
-    
-    // Check what tables exist by trying different possible table names
-    const tableTests = await Promise.all([
-      supabase.from('idr_disputes').select('id').limit(1),
-      supabase.from('disputes').select('id').limit(1),
-      supabase.from('idr_data').select('id').limit(1),
-      supabase.from('federal_idr_disputes').select('id').limit(1)
-    ])
-    
-    console.log('Table existence tests:', tableTests.map((test, i) => ({
-      table: ['idr_disputes', 'disputes', 'idr_data', 'federal_idr_disputes'][i],
-      exists: !test.error,
-      error: test.error?.message,
-      hasData: test.data?.length ? test.data.length > 0 : false
-    })))
-    
-    const quartersCheck = await supabase
-      .from('idr_disputes')
-      .select('data_quarter')
-      .limit(10)
-
-    console.log('Available quarters check:', quartersCheck)
-    
-    // Also test a simple select to see if we can get any data
-    const simpleTest = await supabase
-      .from('idr_disputes')
-      .select('id, dispute_number, data_quarter')
-      .limit(5)
-      
-    console.log('Simple data test:', simpleTest)
-    
-    if (quartersCheck.error) {
-      console.error('❌ Database connection error:', quartersCheck.error)
-      return NextResponse.json({
-        error: 'Database connection failed: ' + quartersCheck.error.message,
-        specialties: [],
-        states: [],
-        practice_sizes: [],
-        top_service_codes: [],
-        metadata: { 
-          error: 'Database connection failed',
-          quarter,
-          total_specialties: 0,
-          total_service_codes: 0
-        }
-      })
-    }
-
-    // Fetch all filter options in parallel, with dynamic filtering support
+    // Fetch all filter options in parallel
     const [specialtiesRes, statesRes, sizesRes, serviceCodesRes] = await Promise.all([
       // Get specialties with dispute counts for better sorting
-      supabase
+      supabaseAdmin
         .from('idr_disputes')
         .select('practice_facility_specialty, data_quarter')
         .not('practice_facility_specialty', 'is', null)
@@ -99,16 +48,12 @@ export async function GET(request: Request) {
             return res
           }
           
-          console.log('Raw specialties data sample:', res.data?.slice(0, 5))
-          
           // Filter by quarter if data exists for that quarter
           const quarterData = res.data?.filter(item => 
             !quarter || item.data_quarter === quarter
           ) || []
           
-          console.log(`Filtered data for quarter ${quarter}:`, quarterData.length, 'records')
-          
-          // Count and sort by frequency
+          // Count and sort alphabetically
           const counts = quarterData.reduce((acc, item) => {
             const specialty = item.practice_facility_specialty
             if (specialty) {
@@ -121,25 +66,23 @@ export async function GET(request: Request) {
             .sort(([nameA,], [nameB,]) => nameA.localeCompare(nameB))
             .map(([name]) => name)
           
-          console.log('Processed specialties:', sortedSpecialties.length, 'unique specialties')
-          
           return { data: sortedSpecialties, error: null }
         }),
       
       // Get states from lookup table with full names
-      supabase
+      supabaseAdmin
         .from('states')
         .select('code, name')
         .order('name'),
       
       // Get practice sizes from lookup table
-      supabase
+      supabaseAdmin
         .from('practice_sizes')
         .select('size_range')
         .order('sort_order'),
       
       // Get distinct service codes (simplified to avoid timeout)
-      supabase
+      supabaseAdmin
         .from('idr_disputes')
         .select('service_code')
         .not('service_code', 'is', null)
@@ -210,8 +153,8 @@ export async function GET(request: Request) {
 
     const serviceCodes = serviceCodesRes.data || []
 
-    // Check if database is empty
-    const isDatabaseEmpty = quartersCheck.data?.length === 0
+    // Check if database is empty by looking at specialties data
+    const isDatabaseEmpty = specialties.length === 0
     const errorMessage = isDatabaseEmpty ? 
       'Database table exists but is empty. Data may need to be migrated or there may be RLS policies blocking access.' : 
       null
@@ -238,7 +181,7 @@ export async function GET(request: Request) {
       states,
       practice_sizes: practiceSizes,
       top_service_codes: serviceCodes,
-      error: errorMessage,
+      ...(errorMessage ? { error: errorMessage } : {}),
       metadata: {
         quarter,
         specialty_filter: specialty,
@@ -248,25 +191,9 @@ export async function GET(request: Request) {
         database_empty: isDatabaseEmpty,
         using_sample_data: isDatabaseEmpty && specialties.length === 0,
         debug_info: {
-          quarters_found: quartersCheck.data?.map(q => q.data_quarter) || [],
-          raw_quarters_count: quartersCheck.data?.length || 0,
           migration_needed: isDatabaseEmpty,
-          connection_test: {
-            error: connectionTest.error?.message,
-            count: connectionTest.count,
-            status: connectionTest.status
-          },
-          simple_test: {
-            error: simpleTest.error?.message,
-            data_length: simpleTest.data?.length || 0,
-            sample_data: simpleTest.data?.slice(0, 2) || []
-          },
-          table_tests: tableTests.map((test, i) => ({
-            table: ['idr_disputes', 'disputes', 'idr_data', 'federal_idr_disputes'][i],
-            exists: !test.error,
-            error: test.error?.message,
-            hasData: test.data?.length ? test.data.length > 0 : false
-          }))
+          specialties_count: finalSpecialties.length,
+          service_codes_count: serviceCodes.length
         }
       }
     })

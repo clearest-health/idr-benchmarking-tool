@@ -74,7 +74,11 @@ CREATE INDEX idx_idr_disputes_practice_size ON idr_disputes (practice_facility_s
 CREATE INDEX idx_idr_disputes_service_code ON idr_disputes (service_code);
 CREATE INDEX idx_idr_disputes_outcome ON idr_disputes (payment_determination_outcome);
 CREATE INDEX idx_idr_disputes_quarter ON idr_disputes (data_quarter);
-CREATE INDEX idx_idr_disputes_provider_name ON idr_disputes USING gin (provider_facility_name gin_trgm_ops);
+
+-- Optimized indexes for practice name searches
+CREATE INDEX idx_idr_disputes_provider_name_exact ON idr_disputes (provider_facility_name, data_quarter);
+CREATE INDEX idx_idr_disputes_provider_name_prefix ON idr_disputes (provider_facility_name text_pattern_ops, data_quarter);
+CREATE INDEX idx_idr_disputes_provider_name_gin ON idr_disputes USING gin (provider_facility_name gin_trgm_ops);
 
 -- Composite indexes for common query patterns
 CREATE INDEX idx_idr_disputes_specialty_location ON idr_disputes (practice_facility_specialty, location_of_service);
@@ -240,6 +244,64 @@ CREATE OR REPLACE FUNCTION get_provider_benchmark(
     avg_idre_compensation NUMERIC
 ) AS $$
 BEGIN
+    -- If practice name is provided, use a more efficient approach
+    IF p_practice_name IS NOT NULL THEN
+        -- First try exact match (fastest)
+        IF EXISTS (
+            SELECT 1 FROM idr_disputes 
+            WHERE provider_facility_name = p_practice_name 
+            AND data_quarter = p_quarter
+            LIMIT 1
+        ) THEN
+            RETURN QUERY
+            SELECT 
+                COUNT(*)::BIGINT as total_disputes,
+                ROUND(
+                    (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*)), 
+                    2
+                ) as provider_win_rate,
+                ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
+                ROUND(AVG(d.prevailing_party_offer_pct_qpa)::numeric, 2) as avg_winning_offer_pct,
+                ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY d.length_determination_days)::numeric, 0) as median_resolution_days,
+                ROUND(AVG(d.idre_compensation)::numeric, 2) as avg_idre_compensation
+            FROM idr_disputes d
+            WHERE 
+                d.data_quarter = p_quarter
+                AND d.provider_facility_name = p_practice_name
+                AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
+                AND (p_state IS NULL OR d.location_of_service = p_state)
+                AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
+                AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes));
+            RETURN;
+        END IF;
+        
+        -- If no exact match, try prefix match with limit for performance
+        RETURN QUERY
+        SELECT 
+            COUNT(*)::BIGINT as total_disputes,
+            ROUND(
+                (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*)), 
+                2
+            ) as provider_win_rate,
+            ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
+            ROUND(AVG(d.prevailing_party_offer_pct_qpa)::numeric, 2) as avg_winning_offer_pct,
+            ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY d.length_determination_days)::numeric, 0) as median_resolution_days,
+            ROUND(AVG(d.idre_compensation)::numeric, 2) as avg_idre_compensation
+        FROM (
+            SELECT * FROM idr_disputes d
+            WHERE 
+                d.data_quarter = p_quarter
+                AND d.provider_facility_name ILIKE p_practice_name || '%'
+                AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
+                AND (p_state IS NULL OR d.location_of_service = p_state)
+                AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
+                AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes))
+            LIMIT 10000 -- Limit to prevent timeout
+        ) d;
+        RETURN;
+    END IF;
+
+    -- For queries without practice name, use the fast path
     RETURN QUERY
     SELECT 
         COUNT(*)::BIGINT as total_disputes,
@@ -257,8 +319,7 @@ BEGIN
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state)
         AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
-        AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes))
-        AND (p_practice_name IS NULL OR d.provider_facility_name ILIKE '%' || p_practice_name || '%');
+        AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes));
 END;
 $$ LANGUAGE plpgsql;
 

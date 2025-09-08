@@ -54,20 +54,24 @@ export class BenchmarkingService {
         quarter: filters.quarter || '2024-Q4'
       }
 
-      const { data, error } = await supabase.rpc('get_provider_benchmark', {
-        p_specialty: peerFilters.specialty || null,
-        p_state: null,
-        p_practice_size: null,
-        p_service_codes: null,
-        p_quarter: peerFilters.quarter
+      const response = await fetch('/api/benchmark', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filters: peerFilters,
+          type: 'peer'
+        })
       })
 
-      if (error) {
-        console.error('Error fetching peer benchmark:', error)
+      if (!response.ok) {
+        console.error('Peer benchmark API response not ok:', response.status)
         return null
       }
 
-      return data?.[0] || null
+      const result = await response.json()
+      return result.data
     } catch (error) {
       console.error('Error in getPeerBenchmark:', error)
       return null

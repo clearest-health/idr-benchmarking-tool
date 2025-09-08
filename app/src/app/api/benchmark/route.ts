@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,8 +27,10 @@ export async function POST(request: NextRequest) {
       p_practice_name: type === 'provider' ? (practiceNameParam || null) : null
     }
 
-    // Call the stored procedure
-    const { data, error } = await supabase.rpc('get_provider_benchmark', params)
+    console.log('🔍 Calling optimized stored procedure with params:', JSON.stringify(params, null, 2))
+
+    // Call the optimized stored procedure
+    const { data, error } = await supabaseAdmin.rpc('get_provider_benchmark', params)
 
     if (error) {
       console.error('Database error:', error)
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     if (type === 'overview') {
       // Get market overview statistics
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('idr_disputes')
         .select(`
           payment_determination_outcome,

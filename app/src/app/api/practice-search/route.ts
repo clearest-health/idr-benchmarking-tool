@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     // Build the base query - get distinct practice names with all relevant details
-    let supabaseQuery = supabase
+    let supabaseQuery = supabaseAdmin
       .from('idr_disputes')
       .select('provider_facility_name, practice_facility_specialty, location_of_service, practice_facility_size')
       .not('provider_facility_name', 'is', null)
