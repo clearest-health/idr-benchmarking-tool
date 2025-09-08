@@ -24,7 +24,8 @@ import {
   Tooltip as MantineTooltip,
   Box,
   Flex,
-  Autocomplete
+  Autocomplete,
+  Table
 } from '@mantine/core'
 import { 
   IconChartBar, 
@@ -293,21 +294,37 @@ export default function BenchmarkingDashboard() {
     }
   }
 
-  const chartData = providerMetrics && peerMetrics ? [
+  // Separate chart data for each metric
+  const winRateData = providerMetrics && peerMetrics ? [
     {
-      name: 'Win Rate (%)',
-      'Your Practice': providerMetrics.provider_win_rate,
-      'Peer Average': peerMetrics.provider_win_rate
+      name: 'Your Practice',
+      value: providerMetrics.provider_win_rate
     },
     {
-      name: 'Avg Offer (% QPA)',
-      'Your Practice': providerMetrics.avg_provider_offer_pct || 0,
-      'Peer Average': peerMetrics.avg_provider_offer_pct || 0
+      name: 'Peer Average',
+      value: peerMetrics.provider_win_rate
+    }
+  ] : []
+
+  const offerData = providerMetrics && peerMetrics ? [
+    {
+      name: 'Your Practice',
+      value: providerMetrics.avg_provider_offer_pct || 0
     },
     {
-      name: 'Resolution Days',
-      'Your Practice': providerMetrics.median_resolution_days || 0,
-      'Peer Average': peerMetrics.median_resolution_days || 0
+      name: 'Peer Average',
+      value: peerMetrics.avg_provider_offer_pct || 0
+    }
+  ] : []
+
+  const resolutionData = providerMetrics && peerMetrics ? [
+    {
+      name: 'Your Practice',
+      value: providerMetrics.median_resolution_days || 0
+    },
+    {
+      name: 'Peer Average',
+      value: peerMetrics.median_resolution_days || 0
     }
   ] : []
 
@@ -521,7 +538,7 @@ export default function BenchmarkingDashboard() {
                 fullWidth
                 leftSection={!loading ? '🚀' : undefined}
               >
-                {loading ? 'Analyzing...' : 'Run Benchmarking Analysis'}
+                {loading ? 'Analyzing...' : 'Run Analysis'}
               </Button>
             </Paper>
           </Grid.Col>
@@ -651,18 +668,67 @@ export default function BenchmarkingDashboard() {
                     📈 Performance Comparison
                   </Title>
                   
-                  <Box h={320}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="Your Practice" fill="#2E8B57" />
-                        <Bar dataKey="Peer Average" fill="#4682B4" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Box>
+                  <Grid>
+                    {/* Win Rate Chart */}
+                    <Grid.Col span={{ base: 12, md: 4 }}>
+                      <Box>
+                        <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
+                          Win Rate (%)
+                        </Title>
+                        <Box h={200}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={winRateData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" fontSize={12} />
+                              <YAxis domain={[0, 100]} />
+                              <Tooltip formatter={(value) => [`${value}%`, 'Win Rate']} />
+                              <Bar dataKey="value" fill="#2E8B57" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Box>
+                    </Grid.Col>
+
+                    {/* Average Offer Chart */}
+                    <Grid.Col span={{ base: 12, md: 4 }}>
+                      <Box>
+                        <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
+                          Average Offer (% QPA)
+                        </Title>
+                        <Box h={200}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={offerData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" fontSize={12} />
+                              <YAxis />
+                              <Tooltip formatter={(value) => [`${value}%`, 'Offer % QPA']} />
+                              <Bar dataKey="value" fill="#4682B4" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Box>
+                    </Grid.Col>
+
+                    {/* Resolution Time Chart */}
+                    <Grid.Col span={{ base: 12, md: 4 }}>
+                      <Box>
+                        <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
+                          Resolution Time (Days)
+                        </Title>
+                        <Box h={200}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={resolutionData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" fontSize={12} />
+                              <YAxis />
+                              <Tooltip formatter={(value) => [`${value}`, 'Days']} />
+                              <Bar dataKey="value" fill="#9333ea" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      </Box>
+                    </Grid.Col>
+                  </Grid>
                 </Paper>
 
                 {/* Insights */}
@@ -689,9 +755,9 @@ export default function BenchmarkingDashboard() {
                       </Alert>
                     ))}
                   </Stack>
-                </Paper>
-
-                {/* Analysis Parameters */}
+                </Paper>  
+                    
+                    {/* Analysis Parameters */}
                 <Paper shadow="sm" p="lg">
                   <Title order={3} size="lg" c="gray.9" mb="md">
                     🎯 Analysis Parameters
@@ -727,6 +793,97 @@ export default function BenchmarkingDashboard() {
                       </Box>
                     </Grid.Col>
                   </Grid>
+                </Paper>
+
+                {/* Raw Data Table */}
+                <Paper shadow="sm" p="lg">
+                  <Title order={3} size="lg" c="gray.9" mb="md">
+                    📋 Raw Data Summary
+                  </Title>
+                  
+                  <Table striped highlightOnHover withTableBorder>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Metric</Table.Th>
+                        <Table.Th ta="center">Your Practice</Table.Th>
+                        <Table.Th ta="center">Peer Average</Table.Th>
+                        <Table.Th ta="center">Difference</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      <Table.Tr>
+                        <Table.Td fw={500}>Total Disputes</Table.Td>
+                        <Table.Td ta="center">{providerMetrics.total_disputes.toLocaleString()}</Table.Td>
+                        <Table.Td ta="center">{peerMetrics?.total_disputes.toLocaleString() || 'N/A'}</Table.Td>
+                        <Table.Td ta="center">
+                          {peerMetrics ? 
+                            `${providerMetrics.total_disputes > peerMetrics.total_disputes ? '+' : ''}${(providerMetrics.total_disputes - peerMetrics.total_disputes).toLocaleString()}` 
+                            : 'N/A'
+                          }
+                        </Table.Td>
+                      </Table.Tr>
+                      
+                      <Table.Tr>
+                        <Table.Td fw={500}>Provider Win Rate</Table.Td>
+                        <Table.Td ta="center">{providerMetrics.provider_win_rate.toFixed(1)}%</Table.Td>
+                        <Table.Td ta="center">{peerMetrics?.provider_win_rate.toFixed(1) || 'N/A'}%</Table.Td>
+                        <Table.Td ta="center" c={peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? 'green' : 'red'}>
+                          {peerMetrics ? 
+                            `${(providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}${(providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1)}pp` 
+                            : 'N/A'
+                          }
+                        </Table.Td>
+                      </Table.Tr>
+                      
+                      <Table.Tr>
+                        <Table.Td fw={500}>Average Offer (% QPA)</Table.Td>
+                        <Table.Td ta="center">{providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%</Table.Td>
+                        <Table.Td ta="center">{peerMetrics?.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%</Table.Td>
+                        <Table.Td ta="center">
+                          {peerMetrics && providerMetrics.avg_provider_offer_pct && peerMetrics.avg_provider_offer_pct ? 
+                            `${(providerMetrics.avg_provider_offer_pct - peerMetrics.avg_provider_offer_pct) > 0 ? '+' : ''}${(providerMetrics.avg_provider_offer_pct - peerMetrics.avg_provider_offer_pct).toFixed(0)}pp` 
+                            : 'N/A'
+                          }
+                        </Table.Td>
+                      </Table.Tr>
+                      
+                      <Table.Tr>
+                        <Table.Td fw={500}>Average Winning Offer (% QPA)</Table.Td>
+                        <Table.Td ta="center">{providerMetrics.avg_winning_offer_pct?.toFixed(0) || 'N/A'}%</Table.Td>
+                        <Table.Td ta="center">{peerMetrics?.avg_winning_offer_pct?.toFixed(0) || 'N/A'}%</Table.Td>
+                        <Table.Td ta="center">
+                          {peerMetrics && providerMetrics.avg_winning_offer_pct && peerMetrics.avg_winning_offer_pct ? 
+                            `${(providerMetrics.avg_winning_offer_pct - peerMetrics.avg_winning_offer_pct) > 0 ? '+' : ''}${(providerMetrics.avg_winning_offer_pct - peerMetrics.avg_winning_offer_pct).toFixed(0)}pp` 
+                            : 'N/A'
+                          }
+                        </Table.Td>
+                      </Table.Tr>
+                      
+                      <Table.Tr>
+                        <Table.Td fw={500}>Median Resolution Days</Table.Td>
+                        <Table.Td ta="center">{providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}</Table.Td>
+                        <Table.Td ta="center">{peerMetrics?.median_resolution_days?.toFixed(0) || 'N/A'}</Table.Td>
+                        <Table.Td ta="center" c={peerMetrics && providerMetrics.median_resolution_days && peerMetrics.median_resolution_days && (providerMetrics.median_resolution_days - peerMetrics.median_resolution_days) < 0 ? 'green' : 'red'}>
+                          {peerMetrics && providerMetrics.median_resolution_days && peerMetrics.median_resolution_days ? 
+                            `${(providerMetrics.median_resolution_days - peerMetrics.median_resolution_days) > 0 ? '+' : ''}${(providerMetrics.median_resolution_days - peerMetrics.median_resolution_days).toFixed(0)} days` 
+                            : 'N/A'
+                          }
+                        </Table.Td>
+                      </Table.Tr>
+                      
+                      <Table.Tr>
+                        <Table.Td fw={500}>Average IDRE Compensation</Table.Td>
+                        <Table.Td ta="center">{providerMetrics.avg_idre_compensation ? `$${providerMetrics.avg_idre_compensation.toFixed(0)}` : 'N/A'}</Table.Td>
+                        <Table.Td ta="center">{peerMetrics?.avg_idre_compensation ? `$${peerMetrics.avg_idre_compensation.toFixed(0)}` : 'N/A'}</Table.Td>
+                        <Table.Td ta="center">
+                          {peerMetrics && providerMetrics.avg_idre_compensation && peerMetrics.avg_idre_compensation ? 
+                            `${(providerMetrics.avg_idre_compensation - peerMetrics.avg_idre_compensation) > 0 ? '+' : ''}$${(providerMetrics.avg_idre_compensation - peerMetrics.avg_idre_compensation).toFixed(0)}` 
+                            : 'N/A'
+                          }
+                        </Table.Td>
+                      </Table.Tr>
+                    </Table.Tbody>
+                  </Table>
                 </Paper>
               </Stack>
             )}
