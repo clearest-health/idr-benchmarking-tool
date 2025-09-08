@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { BenchmarkingService } from '@/lib/benchmarking'
 import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
+import { usePostHog } from 'posthog-js/react'
 import {
   Container,
   Grid,
@@ -75,6 +76,8 @@ interface Insight {
 }
 
 export default function BenchmarkingDashboard() {
+  const posthog = usePostHog()
+  
   const [filters, setFilters] = useState<BenchmarkFilters>({
     quarter: '2024-Q4'
   })
@@ -237,6 +240,15 @@ export default function BenchmarkingDashboard() {
         state: practice.location || prev.state,
         practice_size: practice.size || prev.practice_size
       }))
+
+      // Track practice selection
+      posthog?.capture('practice_selected', {
+        practice_name: practice.name,
+        specialty: practice.specialty,
+        location: practice.location,
+        size: practice.size,
+        dispute_count: practice.disputeCount
+      })
     }
   }
 
@@ -245,6 +257,15 @@ export default function BenchmarkingDashboard() {
       alert('Please select a specialty to run the analysis')
       return
     }
+
+    // Track analysis start
+    posthog?.capture('analysis_started', {
+      specialty: filters.specialty,
+      state: filters.state,
+      practice_size: filters.practice_size,
+      practice_name: practiceName.trim() || null,
+      quarter: filters.quarter
+    })
 
     setLoading(true)
     try {
@@ -260,11 +281,13 @@ export default function BenchmarkingDashboard() {
       ])
 
       if (!providerData || !peerData) {
+        posthog?.capture('analysis_failed', { reason: 'no_data_found' })
         alert('No data found matching your criteria. Please adjust your filters.')
         return
       }
 
       if (providerData.total_disputes === 0) {
+        posthog?.capture('analysis_failed', { reason: 'zero_disputes' })
         alert('No disputes found matching your specific criteria. Please broaden your filters.')
         return
       }
@@ -276,8 +299,20 @@ export default function BenchmarkingDashboard() {
       const generatedInsights = BenchmarkingService.generateInsights(providerData, peerData)
       setInsights(generatedInsights)
 
+      // Track successful analysis
+      posthog?.capture('analysis_completed', {
+        specialty: filters.specialty,
+        state: filters.state,
+        practice_size: filters.practice_size,
+        practice_name: practiceName.trim() || null,
+        total_disputes: providerData.total_disputes,
+        win_rate: providerData.provider_win_rate,
+        insights_generated: generatedInsights.length
+      })
+
     } catch (error) {
       console.error('Error running benchmark analysis:', error)
+      posthog?.capture('analysis_error', { error: String(error) })
       alert('Error running analysis. Please try again.')
     } finally {
       setLoading(false)

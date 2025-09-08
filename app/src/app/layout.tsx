@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { MantineProvider, ColorSchemeScript } from '@mantine/core';
 import '@mantine/core/styles.css';
+import { CSPostHogProvider } from '@/lib/posthog';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,9 +37,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <MantineProvider defaultColorScheme="light">
-          {children}
-        </MantineProvider>
+        <CSPostHogProvider>
+          <MantineProvider defaultColorScheme="light">
+            {children}
+          </MantineProvider>
+        </CSPostHogProvider>
       </body>
     </html>
   );
