@@ -5,6 +5,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { filters, type = 'provider' } = body
+    
+    // Get practice name from URL parameters
+    const { searchParams } = new URL(request.url)
+    const practiceNameParam = searchParams.get('practice_name')
 
     if (!filters) {
       return NextResponse.json(
@@ -20,7 +24,7 @@ export async function POST(request: NextRequest) {
       p_practice_size: type === 'provider' ? (filters.practice_size || null) : null,
       p_service_codes: filters.service_codes || null,
       p_quarter: filters.quarter || '2024-Q4',
-      p_practice_name: type === 'provider' ? (filters.practice_name || null) : null
+      p_practice_name: type === 'provider' ? (practiceNameParam || null) : null
     }
 
     // Call the stored procedure

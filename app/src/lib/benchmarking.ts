@@ -10,21 +10,32 @@ export class BenchmarkingService {
    */
   static async getProviderBenchmark(filters: BenchmarkFilters): Promise<BenchmarkMetrics | null> {
     try {
-      const { data, error } = await supabase.rpc('get_provider_benchmark', {
-        p_specialty: filters.specialty || null,
-        p_state: filters.state || null,
-        p_practice_size: filters.practice_size || null,
-        p_service_codes: filters.service_codes || null,
-        p_quarter: filters.quarter || '2024-Q4',
-        p_practice_name: filters.practice_name || null
+      // Build URL with practice name as query parameter if provided
+      const params = new URLSearchParams()
+      if (filters.practice_name) {
+        params.append('practice_name', filters.practice_name)
+      }
+      
+      const url = `/api/benchmark${params.toString() ? `?${params.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filters,
+          type: 'provider'
+        })
       })
 
-      if (error) {
-        console.error('Error fetching provider benchmark:', error)
+      if (!response.ok) {
+        console.error('API response not ok:', response.status)
         return null
       }
 
-      return data?.[0] || null
+      const result = await response.json()
+      return result.data
     } catch (error) {
       console.error('Error in getProviderBenchmark:', error)
       return null
