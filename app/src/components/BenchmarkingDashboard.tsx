@@ -319,10 +319,9 @@ export default function BenchmarkingDashboard() {
       <Paper shadow="sm" mb="lg">
         <Container size="xl" py="xl">
           <Group align="center">
-            <IconChartBar size={32} color="var(--mantine-color-green-6)" />
             <div>
               <Title order={1} size="h1" c="gray.9">
-                IDR Benchmarking Tool
+                Free IDR Benchmarking Tool
               </Title>
               <Text size="sm" c="gray.6" mt={4}>
                 Compare your IDR performance against peer providers

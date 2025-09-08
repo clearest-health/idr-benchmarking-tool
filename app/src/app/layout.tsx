@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Free IDR Benchmarking Tool",
   description: "Free IDR Benchmarking Tool",
+  icons: {
+    icon: "/logo.svg",
+  },
 };
 
 export default function RootLayout({
