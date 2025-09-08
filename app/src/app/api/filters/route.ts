@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch all filter options in parallel
-    const [specialtiesRes, statesRes, sizesRes, serviceCodesRes] = await Promise.all([
+    const [specialtiesRes, statesRes, sizesRes] = await Promise.all([
       // Get specialties with dispute counts for better sorting
       supabaseAdmin
         .from('idr_disputes')
@@ -79,32 +79,7 @@ export async function GET(request: Request) {
       supabaseAdmin
         .from('practice_sizes')
         .select('size_range')
-        .order('sort_order'),
-      
-      // Get distinct service codes (simplified to avoid timeout)
-      supabaseAdmin
-        .from('idr_disputes')
-        .select('service_code')
-        .not('service_code', 'is', null)
-        .limit(1000)
-        .then((res) => {
-          if (res.error) {
-            console.error('Service codes query error:', res.error)
-            return { data: [], error: res.error }
-          }
-
-          // Get unique service codes
-          const uniqueCodes = [...new Set(res.data?.map(item => item.service_code).filter(Boolean))]
-            .slice(0, 50)
-            .map(code => ({
-              service_code: code,
-              description: `Service Code ${code}`,
-              dispute_count: 1, // Simplified - just show that it exists
-              provider_win_rate: 50 // Placeholder
-            }))
-
-          return { data: uniqueCodes, error: null }
-        })
+        .order('sort_order')
     ])
 
     // Check for errors
@@ -132,14 +107,6 @@ export async function GET(request: Request) {
       )
     }
 
-    if (serviceCodesRes.error) {
-      console.error('Error fetching service codes:', serviceCodesRes.error)
-      return NextResponse.json(
-        { error: 'Failed to fetch service codes' },
-        { status: 500 }
-      )
-    }
-
     // Process the data
     const specialties = specialtiesRes.data || []
     
@@ -150,8 +117,6 @@ export async function GET(request: Request) {
     })) || []
 
     const practiceSizes = sizesRes.data?.map(d => d.size_range).filter(Boolean) || []
-
-    const serviceCodes = serviceCodesRes.data || []
 
     // Check if database is empty by looking at specialties data
     const isDatabaseEmpty = specialties.length === 0
@@ -180,20 +145,17 @@ export async function GET(request: Request) {
       specialties: finalSpecialties,
       states,
       practice_sizes: practiceSizes,
-      top_service_codes: serviceCodes,
       ...(errorMessage ? { error: errorMessage } : {}),
       metadata: {
         quarter,
         specialty_filter: specialty,
         state_filter: state,
         total_specialties: finalSpecialties.length,
-        total_service_codes: serviceCodes.length,
         database_empty: isDatabaseEmpty,
         using_sample_data: isDatabaseEmpty && specialties.length === 0,
         debug_info: {
           migration_needed: isDatabaseEmpty,
-          specialties_count: finalSpecialties.length,
-          service_codes_count: serviceCodes.length
+          specialties_count: finalSpecialties.length
         }
       }
     })

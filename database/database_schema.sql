@@ -232,7 +232,6 @@ CREATE OR REPLACE FUNCTION get_provider_benchmark(
     p_specialty VARCHAR DEFAULT NULL,
     p_state VARCHAR DEFAULT NULL,
     p_practice_size VARCHAR DEFAULT NULL,
-    p_service_codes VARCHAR[] DEFAULT NULL,
     p_quarter VARCHAR DEFAULT '2024-Q4',
     p_practice_name VARCHAR DEFAULT NULL
 ) RETURNS TABLE (
@@ -270,8 +269,7 @@ BEGIN
                 AND d.provider_facility_name = p_practice_name
                 AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
                 AND (p_state IS NULL OR d.location_of_service = p_state)
-                AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
-                AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes));
+                AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size);
             RETURN;
         END IF;
         
@@ -295,7 +293,6 @@ BEGIN
                 AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
                 AND (p_state IS NULL OR d.location_of_service = p_state)
                 AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
-                AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes))
             LIMIT 10000 -- Limit to prevent timeout
         ) d;
         RETURN;
@@ -318,8 +315,7 @@ BEGIN
         d.data_quarter = p_quarter
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state)
-        AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size)
-        AND (p_service_codes IS NULL OR d.service_code = ANY(p_service_codes));
+        AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size);
 END;
 $$ LANGUAGE plpgsql;
 

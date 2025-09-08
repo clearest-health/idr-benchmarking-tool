@@ -74,7 +74,6 @@ export interface BenchmarkFilters {
   specialty?: string
   state?: string
   practice_size?: string
-  service_codes?: string[]
   quarter?: string
   practice_name?: string
 }

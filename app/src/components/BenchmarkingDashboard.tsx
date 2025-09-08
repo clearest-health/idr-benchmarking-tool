@@ -59,18 +59,11 @@ interface FilterOptions {
     display: string
   }>
   practice_sizes: string[]
-  top_service_codes: Array<{
-    service_code: string
-    description: string
-    dispute_count: number
-    provider_win_rate: number
-  }>
   metadata?: {
     quarter?: string
     specialty_filter?: string
     state_filter?: string
     total_specialties?: number
-    total_service_codes?: number
     using_sample_data?: boolean
   }
 }
@@ -88,8 +81,7 @@ export default function BenchmarkingDashboard() {
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     specialties: [],
     states: [],
-    practice_sizes: [],
-    top_service_codes: []
+    practice_sizes: []
   })
   const [providerMetrics, setProviderMetrics] = useState<BenchmarkMetrics | null>(null)
   const [peerMetrics, setPeerMetrics] = useState<BenchmarkMetrics | null>(null)
@@ -114,8 +106,6 @@ export default function BenchmarkingDashboard() {
     location: string
     size: string
   } | null>(null)
-  const [serviceCodeSearch, setServiceCodeSearch] = useState('')
-  const [showAllServiceCodes, setShowAllServiceCodes] = useState(false)
 
   // Load URL parameters on component mount
   useEffect(() => {
@@ -382,7 +372,7 @@ export default function BenchmarkingDashboard() {
               
               {/* Practice Name */}
               <Autocomplete
-                label="Practice Name (Optional)"
+                label="Practice Name"
                 value={practiceName}
                 onChange={(value) => {
                   setPracticeName(value)
@@ -479,54 +469,6 @@ export default function BenchmarkingDashboard() {
                 mb="md"
                 description="Leave blank to compare against all practice sizes"
               />
-
-              {/* Service Codes */}
-              <Stack gap="xs" mb="xl">
-                <Text size="sm" fw={500} c="gray.7">
-                  Focus Procedures
-                  {filters.specialty && (
-                    <Text span size="xs" c="green.6" ml="xs">
-                      (filtered by {filters.specialty.substring(0, 20)}...)
-                    </Text>
-                  )}
-                </Text>
-                
-                <MultiSelect
-                  placeholder="Search and select procedures..."
-                  value={filters.service_codes || []}
-                  onChange={(value) => setFilters({...filters, service_codes: value})}
-                  disabled={filtersLoading}
-                  data={filterOptions.top_service_codes
-                    .slice(0, showAllServiceCodes ? 100 : 30)
-                    .map(code => ({
-                      value: code.service_code,
-                      label: `${code.service_code} - ${code.description?.substring(0, 30)}... (Win: ${code.provider_win_rate?.toFixed(0)}%, Cases: ${code.dispute_count})`
-                    }))
-                  }
-                  searchable
-                  clearable
-                  hidePickedOptions
-                  maxDropdownHeight={200}
-                />
-                
-                {filterOptions.metadata?.total_service_codes && (
-                  <Group justify="space-between">
-                    <Text size="xs" c="gray.5">
-                      Showing {Math.min(showAllServiceCodes ? 100 : 30, filterOptions.metadata.total_service_codes)} of {filterOptions.metadata.total_service_codes} procedures
-                    </Text>
-                    {filterOptions.metadata.total_service_codes > 30 && (
-                      <Button
-                        variant="subtle"
-                        size="compact-xs"
-                        onClick={() => setShowAllServiceCodes(!showAllServiceCodes)}
-                        color="green"
-                      >
-                        {showAllServiceCodes ? 'Show Less' : 'Show More'}
-                      </Button>
-                    )}
-                  </Group>
-                )}
-              </Stack>
 
               {/* Run Analysis Button */}
               <Button
@@ -773,9 +715,6 @@ export default function BenchmarkingDashboard() {
                           <li>• Size: {filters.practice_size || 'All Sizes (not specified)'}</li>
                           {practiceName.trim() && (
                             <li>• Practice Name: "{practiceName.trim()}"</li>
-                          )}
-                          {filters.service_codes && filters.service_codes.length > 0 && (
-                            <li>• Service Codes: {filters.service_codes.slice(0, 3).join(', ')}{filters.service_codes.length > 3 ? '...' : ''}</li>
                           )}
                         </Text>
                       </Box>
