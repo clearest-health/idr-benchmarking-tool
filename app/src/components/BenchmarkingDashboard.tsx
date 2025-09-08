@@ -314,7 +314,7 @@ export default function BenchmarkingDashboard() {
   const COLORS = ['#2E8B57', '#4682B4']
 
   return (
-    <Box bg="gray.0" mih="100vh">
+    <Box bg="gray.0" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Paper shadow="sm" mb="lg">
         <Container size="xl" py="xl">
@@ -331,14 +331,16 @@ export default function BenchmarkingDashboard() {
         </Container>
       </Paper>
 
-      <Container size="xl" py="lg">
-        <Grid>
-          {/* Sidebar - Filters */}
-          <Grid.Col span={{ base: 12, lg: 3 }}>
-            <Paper shadow="sm" p="lg">
-              <Title order={2} size="lg" c="gray.9" mb="md">
-                🎯 Define Your Practice Profile
-              </Title>
+      {/* Main Content - Flex grow to push footer down */}
+      <Box style={{ flex: 1 }}>
+        <Container size="xl" py="lg">
+          <Grid>
+            {/* Sidebar - Filters */}
+            <Grid.Col span={{ base: 12, lg: 3 }}>
+              <Paper shadow="sm" p="lg">
+                <Title order={2} size="lg" c="gray.9" mb="md">
+                  🎯 Define Your Practice Profile
+                </Title>
               
               {filtersError && (
                 <Alert 
@@ -731,6 +733,37 @@ export default function BenchmarkingDashboard() {
           </Grid.Col>
         </Grid>
       </Container>
+      </Box>
+      
+      {/* Footer - Sticks to bottom */}
+      <Paper shadow="sm" py="md" style={{ marginTop: 'auto' }}>
+        <Container size="xl">
+          <Group justify="center" align="center" gap="xs">
+            <img 
+              src="/logo.svg" 
+              alt="Clearest Health" 
+              width={20} 
+              height={14}
+            />
+            <Text size="sm" c="gray.6">
+              Powered by{' '}
+              <Text 
+                component="a" 
+                href="https://www.clearesthealth.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                c="green.6"
+                td="none"
+                style={{ fontWeight: 500 }}
+                onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+              >
+                Clearest Health
+              </Text>
+            </Text>
+          </Group>
+        </Container>
+      </Paper>
     </Box>
   )
 }
