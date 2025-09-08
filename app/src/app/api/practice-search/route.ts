@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       supabaseQuery = supabaseQuery.eq('practice_facility_specialty', specialty)
     }
 
-    const { data, error } = await supabaseQuery.limit(limit * 3) // Get more results to dedupe
+    const { data, error } = await supabaseQuery.limit(limit * 10) // Get more results for better deduplication
 
     if (error) {
       console.error('Practice search error:', error)

@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
           location_of_service,
           data_quarter
         `)
-        .limit(1000) // Limit for performance
+        .limit(5000) // Increased limit for better market overview statistics
 
       if (error) {
         return NextResponse.json(
