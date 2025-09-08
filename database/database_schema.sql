@@ -13,7 +13,7 @@ CREATE TABLE idr_disputes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     
     -- Core dispute identifiers
-    dispute_number VARCHAR(50) NOT NULL,
+    dispute_number VARCHAR(50) NOT NULL UNIQUE,
     dli_number VARCHAR(50),
     
     -- Outcome information
@@ -29,7 +29,7 @@ CREATE TABLE idr_disputes (
     provider_facility_group_name VARCHAR(500),
     provider_facility_name VARCHAR(500),
     provider_email_domain VARCHAR(200),
-    provider_facility_npi VARCHAR(20),
+    provider_facility_npi VARCHAR(50),
     practice_facility_size VARCHAR(50),
     practice_facility_specialty VARCHAR(500),
     
@@ -39,9 +39,9 @@ CREATE TABLE idr_disputes (
     health_plan_type VARCHAR(100),
     
     -- Service information
-    service_code VARCHAR(20),
-    type_of_service_code VARCHAR(20),
-    place_of_service_code VARCHAR(10),
+    service_code VARCHAR(50),
+    type_of_service_code VARCHAR(50),
+    place_of_service_code VARCHAR(20),
     item_service_description TEXT,
     
     -- Geographic information
@@ -58,7 +58,7 @@ CREATE TABLE idr_disputes (
     -- Process information
     length_determination_days INTEGER,
     idre_compensation DECIMAL(10,2),
-    offer_selected_from VARCHAR(20),
+    offer_selected_from VARCHAR(50),
     initiating_party VARCHAR(50),
     
     -- Metadata
@@ -246,10 +246,10 @@ BEGIN
             (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*)), 
             2
         ) as provider_win_rate,
-        ROUND(AVG(d.provider_offer_pct_qpa), 2) as avg_provider_offer_pct,
-        ROUND(AVG(d.prevailing_party_offer_pct_qpa), 2) as avg_winning_offer_pct,
-        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY d.length_determination_days), 0) as median_resolution_days,
-        ROUND(AVG(d.idre_compensation), 2) as avg_idre_compensation
+        ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
+        ROUND(AVG(d.prevailing_party_offer_pct_qpa)::numeric, 2) as avg_winning_offer_pct,
+        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY d.length_determination_days)::numeric, 0) as median_resolution_days,
+        ROUND(AVG(d.idre_compensation)::numeric, 2) as avg_idre_compensation
     FROM idr_disputes d
     WHERE 
         d.data_quarter = p_quarter

@@ -20,12 +20,46 @@ from typing import Optional, Dict, Any, List
 import sys
 from tqdm import tqdm
 import numpy as np
+import os
+from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+def get_supabase_connection_string():
+    """Get Supabase connection string from environment variables"""
+    # Load environment variables from the app directory
+    app_env_path = Path(__file__).parent.parent / "app" / ".env.local"
+    if app_env_path.exists():
+        load_dotenv(app_env_path)
+        logger.info(f"📄 Loaded environment variables from {app_env_path}")
+
+    # Extract connection details from environment
+    supabase_url = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
+
+    # If the URL is the HTTP URL, we need to construct the PostgreSQL connection string
+    if supabase_url.startswith("https://"):
+        # Extract project ID from URL like https://qkrrhpyjgwwhzjmwkbxw.supabase.co
+        project_id = supabase_url.replace("https://", "").replace(".supabase.co", "")
+
+        # Get password from environment variables
+        password = os.getenv("SUPABASE_DB_PASSWORD")
+        if not password:
+            logger.error("❌ SUPABASE_DB_PASSWORD not found in .env.local file")
+            logger.error("Please add: SUPABASE_DB_PASSWORD=your_password to .env.local")
+            return None
+
+        # Construct the pooler connection string
+        conn_string = f"postgresql://postgres.{project_id}:{password}@aws-1-us-east-1.pooler.supabase.com:6543/postgres"
+        logger.info(f"🔗 Constructed connection string for project: {project_id}")
+        return conn_string
+
+    # If it's already a PostgreSQL connection string, return as-is
+    return supabase_url
 
 
 class IDRDataMigrator:
@@ -172,7 +206,9 @@ class IDRDataMigrator:
         logger.info(f"✅ Data cleaned. Shape: {df_clean.shape}")
         return df_clean
 
-    def load_quarter_data(self, excel_file: str, quarter: str) -> int:
+    def load_quarter_data(
+        self, excel_file: str, quarter: str, test_rows: Optional[int] = None
+    ) -> int:
         """Load data for a specific quarter"""
         logger.info(f"📊 Loading data from {excel_file} for quarter {quarter}")
 
@@ -180,6 +216,11 @@ class IDRDataMigrator:
             # Read the main dispute data
             df = pd.read_excel(excel_file, sheet_name="OON Emergency and Non-Emergency")
             logger.info(f"📁 Loaded {len(df):,} rows from Excel")
+
+            # Limit to test rows if specified
+            if test_rows:
+                df = df.head(test_rows)
+                logger.info(f"🧪 Limited to first {test_rows} rows for testing")
 
             # Clean the data
             df_clean = self.clean_data(df)
@@ -192,6 +233,24 @@ class IDRDataMigrator:
             total_rows = len(df_clean)
             inserted_rows = 0
 
+            # Test first row to catch schema issues early
+            if len(df_clean) > 0:
+                logger.info("🔍 Testing first row to validate schema...")
+                test_row = df_clean.iloc[0:1]
+                test_data = []
+                for _, row in test_row.iterrows():
+                    row_data = []
+                    for value in row:
+                        if pd.isna(value):
+                            row_data.append(None)
+                        elif isinstance(value, (np.integer, np.floating)):
+                            row_data.append(
+                                float(value) if np.isfinite(value) else None
+                            )
+                        else:
+                            row_data.append(value)
+                    test_data.append(tuple(row_data))
+
             with self.conn.cursor() as cursor:
                 # Prepare the INSERT statement
                 columns = list(df_clean.columns)
@@ -202,6 +261,29 @@ class IDRDataMigrator:
                     ON CONFLICT (dispute_number) DO UPDATE SET
                         updated_at = NOW()
                 """
+
+                # Test first row insertion to catch schema issues early
+                if len(df_clean) > 0:
+                    try:
+                        logger.info(
+                            f"🧪 Testing first row insertion with {len(columns)} columns..."
+                        )
+                        cursor.execute(insert_sql, test_data[0])
+                        self.conn.commit()
+                        logger.info("✅ First row test successful!")
+
+                        # Remove the test row from our data since we already inserted it
+                        df_clean = df_clean.iloc[1:]
+                        total_rows = len(df_clean)
+                        inserted_rows = 1
+
+                    except Exception as e:
+                        logger.error(f"❌ SCHEMA ERROR - First row failed: {e}")
+                        logger.error(
+                            "🔍 This indicates a schema mismatch. Please fix the schema first."
+                        )
+                        self.conn.rollback()
+                        raise
 
                 # Insert in batches with progress bar
                 with tqdm(total=total_rows, desc="Inserting records") as pbar:
@@ -224,26 +306,31 @@ class IDRDataMigrator:
                                     row_data.append(value)
                             batch_data.append(tuple(row_data))
 
-                        # Execute batch insert
+                        # Execute batch insert with individual row fallback
                         try:
                             cursor.executemany(insert_sql, batch_data)
                             inserted_rows += len(batch_data)
                             pbar.update(len(batch_data))
+                            self.conn.commit()  # Commit successful batch
                         except Exception as e:
-                            logger.error(
-                                f"❌ Error inserting batch {i}-{i+len(batch_data)}: {e}"
+                            logger.warning(
+                                f"⚠️ Batch insert failed, trying individual rows: {str(e)[:100]}"
                             )
+                            self.conn.rollback()  # Rollback failed batch
+
                             # Try inserting rows individually to identify problematic rows
                             for j, row_data in enumerate(batch_data):
                                 try:
                                     cursor.execute(insert_sql, row_data)
+                                    self.conn.commit()  # Commit each successful row
                                     inserted_rows += 1
                                     pbar.update(1)
                                 except Exception as row_error:
-                                    logger.warning(f"⚠️ Skipping row {i+j}: {row_error}")
+                                    self.conn.rollback()  # Rollback failed row
+                                    logger.warning(
+                                        f"⚠️ Skipping row {i+j}: {str(row_error)[:100]}"
+                                    )
                                     pbar.update(1)
-
-                self.conn.commit()
 
             logger.info(
                 f"✅ Successfully inserted {inserted_rows:,} rows for quarter {quarter}"
@@ -381,8 +468,8 @@ def main():
     )
     parser.add_argument(
         "--connection-string",
-        required=True,
-        help="PostgreSQL connection string (e.g., postgresql://user:pass@host:port/db)",
+        required=False,
+        help="PostgreSQL connection string (e.g., postgresql://user:pass@host:port/db). If not provided, will try to construct from .env.local",
     )
     parser.add_argument(
         "--excel-file",
@@ -400,8 +487,26 @@ def main():
     parser.add_argument(
         "--schema-file", default="database_schema.sql", help="Path to SQL schema file"
     )
+    parser.add_argument(
+        "--test-rows",
+        type=int,
+        default=None,
+        help="Limit to first N rows for testing (e.g., --test-rows 10)",
+    )
 
     args = parser.parse_args()
+
+    # Get connection string
+    if args.connection_string:
+        connection_string = args.connection_string
+        logger.info("🔗 Using provided connection string")
+    else:
+        connection_string = get_supabase_connection_string()
+        if not connection_string:
+            logger.error(
+                "❌ No connection string provided and couldn't construct from environment"
+            )
+            sys.exit(1)
 
     # Validate files exist
     if not Path(args.excel_file).exists():
@@ -413,7 +518,7 @@ def main():
         sys.exit(1)
 
     # Initialize migrator
-    migrator = IDRDataMigrator(args.connection_string)
+    migrator = IDRDataMigrator(connection_string)
 
     try:
         # Connect to database
@@ -426,7 +531,11 @@ def main():
 
         # Load data
         logger.info(f"🚀 Starting migration for quarter {args.quarter}")
-        inserted_rows = migrator.load_quarter_data(args.excel_file, args.quarter)
+        if args.test_rows:
+            logger.info(f"🧪 TEST MODE: Loading only first {args.test_rows} rows")
+        inserted_rows = migrator.load_quarter_data(
+            args.excel_file, args.quarter, args.test_rows
+        )
 
         # Populate lookup tables
         migrator.populate_lookup_tables()

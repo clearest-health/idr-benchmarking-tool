@@ -26,7 +26,11 @@ import {
 
 interface FilterOptions {
   specialties: string[]
-  states: string[]
+  states: Array<{
+    code: string
+    name: string
+    display: string
+  }>
   practice_sizes: string[]
   top_service_codes: Array<{
     service_code: string
@@ -34,6 +38,13 @@ interface FilterOptions {
     dispute_count: number
     provider_win_rate: number
   }>
+  metadata?: {
+    quarter?: string
+    specialty_filter?: string
+    state_filter?: string
+    total_specialties?: number
+    total_service_codes?: number
+  }
 }
 
 interface Insight {
@@ -56,16 +67,54 @@ export default function BenchmarkingDashboard() {
   const [peerMetrics, setPeerMetrics] = useState<BenchmarkMetrics | null>(null)
   const [insights, setInsights] = useState<Insight[]>([])
   const [loading, setLoading] = useState(false)
+  const [filtersLoading, setFiltersLoading] = useState(true)
+  const [filtersError, setFiltersError] = useState<string | null>(null)
   const [practiceName, setPracticeName] = useState('Your Practice')
+  const [serviceCodeSearch, setServiceCodeSearch] = useState('')
+  const [showAllServiceCodes, setShowAllServiceCodes] = useState(false)
 
   // Load filter options on component mount
   useEffect(() => {
     const loadFilterOptions = async () => {
-      const options = await BenchmarkingService.getFilterOptions()
-      setFilterOptions(options)
+      try {
+        setFiltersLoading(true)
+        setFiltersError(null)
+        const options = await BenchmarkingService.getFilterOptions({ quarter: filters.quarter })
+        setFilterOptions(options)
+      } catch (error) {
+        console.error('Failed to load filter options:', error)
+        setFiltersError('Failed to load filter options. Please refresh the page.')
+      } finally {
+        setFiltersLoading(false)
+      }
     }
     loadFilterOptions()
-  }, [])
+  }, [filters.quarter])
+
+  // Dynamic filter loading when specialty or state changes
+  useEffect(() => {
+    if (!filters.specialty && !filters.state) return
+
+    const loadDynamicFilters = async () => {
+      try {
+        const options = await BenchmarkingService.getFilterOptions({
+          specialty: filters.specialty,
+          state: filters.state,
+          quarter: filters.quarter
+        })
+        setFilterOptions(prev => ({
+          ...prev,
+          top_service_codes: options.top_service_codes,
+          metadata: options.metadata
+        }))
+      } catch (error) {
+        console.error('Failed to load dynamic filters:', error)
+      }
+    }
+
+    const debounceTimer = setTimeout(loadDynamicFilters, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [filters.specialty, filters.state, filters.quarter])
 
   const runBenchmarkAnalysis = async () => {
     if (!filters.specialty) {
@@ -152,6 +201,23 @@ export default function BenchmarkingDashboard() {
                 🎯 Define Your Practice Profile
               </h2>
               
+              {filtersError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600 font-medium">⚠️ Configuration Issue</p>
+                  <p className="text-sm text-red-600 mt-1">{filtersError}</p>
+                  {filtersError.includes('Database not configured') && (
+                    <div className="mt-2 text-xs text-red-500">
+                      <p>To fix this:</p>
+                      <ol className="list-decimal list-inside mt-1 space-y-1">
+                        <li>Create <code className="bg-red-100 px-1 rounded">.env.local</code> file in the app directory</li>
+                        <li>Add your Supabase URL and anon key</li>
+                        <li>Restart the development server</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               {/* Practice Name */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -174,15 +240,26 @@ export default function BenchmarkingDashboard() {
                 <select
                   value={filters.specialty || ''}
                   onChange={(e) => setFilters({...filters, specialty: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  disabled={filtersLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Select Specialty</option>
+                  <option value="">
+                    {filtersLoading ? 'Loading specialties...' : 'Select Specialty'}
+                  </option>
                   {filterOptions.specialties.slice(0, 50).map(specialty => (
                     <option key={specialty} value={specialty}>
                       {specialty.length > 40 ? `${specialty.substring(0, 40)}...` : specialty}
                     </option>
                   ))}
                 </select>
+                {filterOptions.metadata?.total_specialties && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {filterOptions.metadata.total_specialties} specialties available
+                    {filterOptions.metadata?.using_sample_data && (
+                      <span className="text-orange-600 ml-1">(sample data - database empty)</span>
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* State */}
@@ -194,11 +271,16 @@ export default function BenchmarkingDashboard() {
                 <select
                   value={filters.state || ''}
                   onChange={(e) => setFilters({...filters, state: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  disabled={filtersLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">All States</option>
+                  <option value="">
+                    {filtersLoading ? 'Loading states...' : 'All States'}
+                  </option>
                   {filterOptions.states.map(state => (
-                    <option key={state} value={state}>{state}</option>
+                    <option key={state.code} value={state.code}>
+                      {state.display}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -212,9 +294,12 @@ export default function BenchmarkingDashboard() {
                 <select
                   value={filters.practice_size || ''}
                   onChange={(e) => setFilters({...filters, practice_size: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  disabled={filtersLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">All Sizes</option>
+                  <option value="">
+                    {filtersLoading ? 'Loading sizes...' : 'All Sizes'}
+                  </option>
                   {filterOptions.practice_sizes.map(size => (
                     <option key={size} value={size}>{size}</option>
                   ))}
@@ -225,7 +310,50 @@ export default function BenchmarkingDashboard() {
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Focus Procedures (Optional)
+                  {filters.specialty && (
+                    <span className="text-green-600 text-xs ml-1">
+                      (filtered by {filters.specialty.substring(0, 20)}...)
+                    </span>
+                  )}
                 </label>
+                
+                {/* Search box for service codes */}
+                <div className="mb-2">
+                  <input
+                    type="text"
+                    placeholder="Search procedures..."
+                    value={serviceCodeSearch}
+                    onChange={(e) => setServiceCodeSearch(e.target.value)}
+                    className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+
+                {/* Selected service codes display */}
+                {filters.service_codes && filters.service_codes.length > 0 && (
+                  <div className="mb-2 p-2 bg-green-50 rounded-md">
+                    <p className="text-xs text-green-700 mb-1">Selected procedures:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {filters.service_codes.map(code => (
+                        <span
+                          key={code}
+                          className="inline-flex items-center px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
+                        >
+                          {code}
+                          <button
+                            onClick={() => {
+                              const updated = filters.service_codes?.filter(c => c !== code) || []
+                              setFilters({...filters, service_codes: updated})
+                            }}
+                            className="ml-1 hover:text-green-600"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <select
                   multiple
                   value={filters.service_codes || []}
@@ -233,15 +361,43 @@ export default function BenchmarkingDashboard() {
                     const selected = Array.from(e.target.selectedOptions, option => option.value)
                     setFilters({...filters, service_codes: selected})
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 h-24"
+                  disabled={filtersLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 h-32 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
                 >
-                  {filterOptions.top_service_codes.slice(0, 20).map(code => (
-                    <option key={code.service_code} value={code.service_code}>
-                      {code.service_code} - {code.description?.substring(0, 30)}...
-                    </option>
-                  ))}
+                  {filterOptions.top_service_codes
+                    .filter(code => 
+                      !serviceCodeSearch || 
+                      code.service_code.toLowerCase().includes(serviceCodeSearch.toLowerCase()) ||
+                      code.description?.toLowerCase().includes(serviceCodeSearch.toLowerCase())
+                    )
+                    .slice(0, showAllServiceCodes ? 100 : 30)
+                    .map(code => (
+                      <option key={code.service_code} value={code.service_code}>
+                        {code.service_code} - {code.description?.substring(0, 30)}... 
+                        (Win: {code.provider_win_rate?.toFixed(0)}%, Cases: {code.dispute_count})
+                      </option>
+                    ))
+                  }
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                
+                <div className="text-xs text-gray-500 mt-1 space-y-1">
+                  <p>Hold Ctrl/Cmd to select multiple</p>
+                  {filterOptions.metadata?.total_service_codes && (
+                    <div className="flex justify-between items-center">
+                      <span>
+                        Showing {Math.min(showAllServiceCodes ? 100 : 30, filterOptions.metadata.total_service_codes)} of {filterOptions.metadata.total_service_codes} procedures
+                      </span>
+                      {filterOptions.metadata.total_service_codes > 30 && (
+                        <button
+                          onClick={() => setShowAllServiceCodes(!showAllServiceCodes)}
+                          className="text-green-600 hover:text-green-700 underline"
+                        >
+                          {showAllServiceCodes ? 'Show Less' : 'Show More'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Run Analysis Button */}
