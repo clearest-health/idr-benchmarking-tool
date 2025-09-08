@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BenchmarkingService } from '../lib/benchmarking'
-import { BenchmarkMetrics, BenchmarkFilters } from '../lib/supabase'
+import { BenchmarkingService } from '@/lib/benchmarking'
+import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
 import {
   Container,
   Grid,
