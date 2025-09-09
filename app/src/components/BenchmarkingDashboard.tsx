@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { BenchmarkingService } from '@/lib/benchmarking'
 import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
 import { usePostHog } from 'posthog-js/react'
@@ -173,15 +174,6 @@ export default function BenchmarkingDashboard() {
     }
   }, [])
 
-  // Auto-select practice when search results come back (for URL parameters)
-  useEffect(() => {
-    if (practiceData.length > 0 && practiceName && !selectedPractice && filterOptions.specialties.length > 0) {
-      const exactMatch = practiceData.find(p => p.name.toLowerCase() === practiceName.toLowerCase())
-      if (exactMatch) {
-        handlePracticeSelection(exactMatch.name)
-      }
-    }
-  }, [practiceData, practiceName, selectedPractice, filterOptions.specialties, handlePracticeSelection])
 
   // Load filter options on component mount
   useEffect(() => {
@@ -227,7 +219,7 @@ export default function BenchmarkingDashboard() {
   }, [filters.specialty, filters.state, filters.quarter])
 
   // Search for practice names
-  const searchPracticeNames = async (query: string) => {
+  const searchPracticeNames = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setPracticeNameSuggestions([])
       setPracticeData([])
@@ -257,10 +249,10 @@ export default function BenchmarkingDashboard() {
     } finally {
       setPracticeNameLoading(false)
     }
-  }
+  }, [filters.specialty])
 
   // Handle practice selection and auto-populate fields
-  const handlePracticeSelection = (selectedPracticeName: string) => {
+  const handlePracticeSelection = useCallback((selectedPracticeName: string) => {
     const practice = practiceData.find(p => p.name === selectedPracticeName)
     if (practice) {
       setSelectedPractice({
@@ -299,7 +291,17 @@ export default function BenchmarkingDashboard() {
         dispute_count: practice.disputeCount
       })
     }
-  }
+  }, [practiceData, filterOptions.specialties, filterOptions.states, filterOptions.practice_sizes, posthog])
+
+  // Auto-select practice when search results come back (for URL parameters)
+  useEffect(() => {
+    if (practiceData.length > 0 && practiceName && !selectedPractice && filterOptions.specialties.length > 0) {
+      const exactMatch = practiceData.find(p => p.name.toLowerCase() === practiceName.toLowerCase())
+      if (exactMatch) {
+        handlePracticeSelection(exactMatch.name)
+      }
+    }
+  }, [practiceData, practiceName, selectedPractice, filterOptions.specialties, handlePracticeSelection])
 
   // Search for email domains
   const searchEmailDomains = async (query: string) => {
@@ -1233,7 +1235,7 @@ export default function BenchmarkingDashboard() {
       <Paper shadow="sm" py="md" style={{ marginTop: 'auto' }}>
         <Container size="xl">
           <Group justify="center" align="center" gap="xs">
-            <img 
+            <Image 
               src="/logo.svg" 
               alt="Clearest Health" 
               width={20} 
