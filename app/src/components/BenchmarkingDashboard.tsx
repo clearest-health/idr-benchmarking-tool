@@ -859,12 +859,12 @@ export default function BenchmarkingDashboard() {
                         <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
                           Win Rate (%)
                         </Title>
-                        <Box h={200}>
-                    <ResponsiveContainer width="100%" height="100%">
+                        <Box h={300}>
+                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={winRateData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" fontSize={12} />
-                              <YAxis domain={[0, 100]} />
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" fontSize={14} />
+                              <YAxis domain={[0, 100]} fontSize={12} />
                               <Tooltip formatter={(value) => [`${value}%`, 'Win Rate']} />
                               <Bar dataKey="value">
                                 {winRateData.map((entry, index) => (
@@ -883,20 +883,20 @@ export default function BenchmarkingDashboard() {
                         <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
                           Average Offer (% QPA)
                         </Title>
-                        <Box h={200}>
+                        <Box h={300}>
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={offerData}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" fontSize={12} />
-                        <YAxis />
+                              <XAxis dataKey="name" fontSize={14} />
+                              <YAxis fontSize={12} />
                               <Tooltip formatter={(value) => [`${value}%`, 'Offer % QPA']} />
                               <Bar dataKey="value">
                                 {offerData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
                                 ))}
                               </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                            </BarChart>
+                          </ResponsiveContainer>
                         </Box>
                       </Box>
                     </Grid.Col>
@@ -907,20 +907,20 @@ export default function BenchmarkingDashboard() {
                         <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
                           Resolution Time (Days)
                         </Title>
-                        <Box h={200}>
-                    <ResponsiveContainer width="100%" height="100%">
+                        <Box h={300}>
+                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={resolutionData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" fontSize={12} />
-                        <YAxis />
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" fontSize={14} />
+                              <YAxis fontSize={12} />
                               <Tooltip formatter={(value) => [`${value}`, 'Days']} />
                               <Bar dataKey="value">
                                 {resolutionData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
                                 ))}
                               </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                            </BarChart>
+                          </ResponsiveContainer>
                         </Box>
                       </Box>
                     </Grid.Col>
