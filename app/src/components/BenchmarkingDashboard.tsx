@@ -894,33 +894,31 @@ export default function BenchmarkingDashboard() {
                       </Card>
                     </Grid.Col>
 
-                    {/* Additional Metrics for Law Firms and Provider Groups */}
-                    {(filters.user_type === 'law_firm' || filters.user_type === 'provider_group') ? (
-                      <Grid.Col span={4}>
-                        <Card bg="teal.0" p="md" h={100}>
-                          <Group align="center" h="100%">
-                            <IconBuilding size={28} color="var(--mantine-color-teal-6)" />
-                            <div>
-                              <Text size="sm" fw={500} c="teal.9">
-                                {filters.user_type === 'law_firm' ? 'Practices' : 'Facilities'}
-                              </Text>
-                              <Text size="xl" fw={700} c="teal.6">
-                                {filters.user_type === 'law_firm' ? 
-                                  (providerMetrics.total_practices?.toLocaleString() || '0') :
-                                  (providerMetrics.total_facilities?.toLocaleString() || '0')
-                                }
-                              </Text>
-                              <Text size="xs" c="teal.7">
-                                {filters.user_type === 'law_firm' ? 'represented' : 'in network'}
-                              </Text>
-                            </div>
-                          </Group>
-                        </Card>
-                      </Grid.Col>
-                    ) : (
-                      /* Empty space for individual providers to maintain layout */
-                      <Grid.Col span={4}></Grid.Col>
-                    )}
+                    {/* Additional Metrics for all user types */}
+                    <Grid.Col span={4}>
+                      <Card bg="teal.0" p="md" h={100}>
+                        <Group align="center" h="100%">
+                          <IconBuilding size={28} color="var(--mantine-color-teal-6)" />
+                          <div>
+                            <Text size="sm" fw={500} c="teal.9">
+                              {filters.user_type === 'law_firm' ? 'Practices' : 
+                               filters.user_type === 'provider_group' ? 'Facilities' : 'Providers'}
+                            </Text>
+                            <Text size="xl" fw={700} c="teal.6">
+                              {filters.user_type === 'law_firm' ? 
+                                (providerMetrics.total_practices?.toLocaleString() || '0') :
+                                filters.user_type === 'provider_group' ?
+                                (providerMetrics.total_facilities?.toLocaleString() || '0') : '1'
+                              }
+                            </Text>
+                            <Text size="xs" c="teal.7">
+                              {filters.user_type === 'law_firm' ? 'represented' : 
+                               filters.user_type === 'provider_group' ? 'in network' : 'analyzed'}
+                            </Text>
+                          </div>
+                        </Group>
+                      </Card>
+                    </Grid.Col>
                   </Grid>
                 </Paper>
 
@@ -1059,6 +1057,9 @@ export default function BenchmarkingDashboard() {
                           <li>• Location: {filters.state || 'All States (not specified)'}</li>
                           {filters.user_type === 'individual_provider' && (
                             <li>• Size: {filters.practice_size || 'All Sizes (not specified)'}</li>
+                          )}
+                          {filters.user_type === 'individual_provider' && (
+                            <li>• Providers: 1</li>
                           )}
                           {(filters.user_type === 'law_firm' || filters.user_type === 'provider_group') && providerMetrics && (
                             <>
