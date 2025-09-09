@@ -823,81 +823,83 @@ export default function BenchmarkingDashboard() {
                   </Title>
                   
                   <Grid>
-                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
-                      <Card bg="green.0" p="md">
-                        <Group align="center">
+                    {/* Top Row - Win Rate and Average Offer (50% each) */}
+                    <Grid.Col span={6}>
+                      <Card bg="green.0" p="lg" h={120}>
+                        <Group align="center" h="100%">
                           <IconTrophy size={32} color="var(--mantine-color-green-6)" />
                           <div>
                             <Text size="sm" fw={500} c="green.9">Win Rate</Text>
-                            <Text size="xl" fw={700} c="green.6">
-                            {providerMetrics.provider_win_rate.toFixed(1)}%
+                            <Text size="2xl" fw={700} c="green.6">
+                              {providerMetrics.provider_win_rate.toFixed(1)}%
                             </Text>
                             <Text size="xs" c="green.7">
-                            {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
-                            {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
+                              {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
+                              {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
                             </Text>
-                        </div>
+                          </div>
                         </Group>
                       </Card>
                     </Grid.Col>
 
-                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
-                      <Card bg="blue.0" p="md">
-                        <Group align="center">
+                    <Grid.Col span={6}>
+                      <Card bg="blue.0" p="lg" h={120}>
+                        <Group align="center" h="100%">
                           <IconCurrencyDollar size={32} color="var(--mantine-color-blue-6)" />
                           <div>
                             <Text size="sm" fw={500} c="blue.9">Avg Offer</Text>
-                            <Text size="xl" fw={700} c="blue.6">
-                            {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
+                            <Text size="2xl" fw={700} c="blue.6">
+                              {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
                             </Text>
                             <Text size="xs" c="blue.7">QPA</Text>
-                        </div>
+                          </div>
                         </Group>
                       </Card>
                     </Grid.Col>
 
-                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
-                      <Card bg="violet.0" p="md">
-                        <Group align="center">
-                          <IconClock size={32} color="var(--mantine-color-violet-6)" />
+                    {/* Bottom Row - Three cards (33% each) */}
+                    <Grid.Col span={4}>
+                      <Card bg="violet.0" p="md" h={100}>
+                        <Group align="center" h="100%">
+                          <IconClock size={28} color="var(--mantine-color-violet-6)" />
                           <div>
                             <Text size="sm" fw={500} c="violet.9">Resolution</Text>
                             <Text size="xl" fw={700} c="violet.6">
-                            {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
+                              {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
                             </Text>
                             <Text size="xs" c="violet.7">days</Text>
-                        </div>
+                          </div>
                         </Group>
                       </Card>
                     </Grid.Col>
 
-                    <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
-                      <Card bg="orange.0" p="md">
-                        <Group align="center">
-                          <IconChartBar size={32} color="var(--mantine-color-orange-6)" />
+                    <Grid.Col span={4}>
+                      <Card bg="orange.0" p="md" h={100}>
+                        <Group align="center" h="100%">
+                          <IconChartBar size={28} color="var(--mantine-color-orange-6)" />
                           <div>
                             <Text size="sm" fw={500} c="orange.9">
                               {filters.user_type === 'law_firm' ? 'Total Disputes' : 
                                filters.user_type === 'provider_group' ? 'Total Disputes' : 'Disputes'}
                             </Text>
                             <Text size="xl" fw={700} c="orange.6">
-                            {providerMetrics.total_disputes.toLocaleString()}
+                              {providerMetrics.total_disputes.toLocaleString()}
                             </Text>
                             <Text size="xs" c="orange.7">
                               {filters.user_type === 'law_firm' ? 'across all clients' :
                                filters.user_type === 'provider_group' ? 'across all facilities' : 'analyzed'}
                             </Text>
-                        </div>
+                          </div>
                         </Group>
                       </Card>
                     </Grid.Col>
 
                     {/* Additional Metrics for Law Firms and Provider Groups */}
-                    {(filters.user_type === 'law_firm' || filters.user_type === 'provider_group') && (
-                      <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
-                        <Card bg="teal.0" p="md">
-                          <Group align="center">
-                            <IconBuilding size={32} color="var(--mantine-color-teal-6)" />
+                    {(filters.user_type === 'law_firm' || filters.user_type === 'provider_group') ? (
+                      <Grid.Col span={4}>
+                        <Card bg="teal.0" p="md" h={100}>
+                          <Group align="center" h="100%">
+                            <IconBuilding size={28} color="var(--mantine-color-teal-6)" />
                             <div>
                               <Text size="sm" fw={500} c="teal.9">
                                 {filters.user_type === 'law_firm' ? 'Practices' : 'Facilities'}
@@ -911,10 +913,13 @@ export default function BenchmarkingDashboard() {
                               <Text size="xs" c="teal.7">
                                 {filters.user_type === 'law_firm' ? 'represented' : 'in network'}
                               </Text>
-                      </div>
+                            </div>
                           </Group>
                         </Card>
                       </Grid.Col>
+                    ) : (
+                      /* Empty space for individual providers to maintain layout */
+                      <Grid.Col span={4}></Grid.Col>
                     )}
                   </Grid>
                 </Paper>
