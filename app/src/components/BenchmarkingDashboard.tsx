@@ -463,7 +463,7 @@ export default function BenchmarkingDashboard() {
             <Grid.Col span={{ base: 12, lg: 3 }}>
             <Paper shadow="sm" p="lg">
               <Title order={2} size="lg" c="gray.9" mb="md">
-                🎯 Define Your Profile
+                Define Your Profile
               </Title>
 
               {/* User Type Selection */}
