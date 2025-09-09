@@ -506,6 +506,10 @@ export default function BenchmarkingDashboard() {
                         setEmailDomain('')
                         setFacilityGroup('')
                         setSelectedPractice(null)
+                        // Clear analysis results to show welcome screen
+                        setProviderMetrics(null)
+                        setPeerMetrics(null)
+                        setInsights([])
                       }}
                       data={[
                         { value: 'individual_provider', label: '🏥 Provider/Practice' },
