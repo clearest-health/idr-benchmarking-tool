@@ -458,37 +458,280 @@ export default function BenchmarkingDashboard() {
       {/* Main Content - Flex grow to push footer down */}
       <Box style={{ flex: 1 }}>
         <Container size="xl" py="lg">
-          <Grid>
-          {/* Sidebar - Filters */}
-            <Grid.Col span={{ base: 12, lg: 3 }}>
-            <Paper shadow="sm" p="lg">
-              <Title order={2} size="lg" c="gray.9" mb="md">
-                Define Your Profile
+          {/* Horizontal Form Layout */}
+          <Stack gap="xl">
+            <Box ta="center">
+              <Title order={2} size="xl" c="gray.8" mb="xs">
+                🎯 Get Your IDR Performance Analysis
               </Title>
+              <Text size="md" c="gray.6">
+                Compare your performance against industry peers in 3 simple steps
+              </Text>
+            </Box>
 
-              {/* User Type Selection */}
-              <Select
-                label="I am a:"
-                value={filters.user_type || 'individual_provider'}
-                onChange={(value) => {
-                  setFilters({
-                    ...filters, 
-                    user_type: value as 'individual_provider' | 'provider_group' | 'law_firm'
-                  })
-                  // Clear relevant fields when switching types
-                  setPracticeName('')
-                  setEmailDomain('')
-                  setFacilityGroup('')
-                  setSelectedPractice(null)
-                }}
-                data={[
-                  { value: 'individual_provider', label: '🏥 Individual Provider or Practice' },
-                  { value: 'provider_group', label: '🏢 Provider Group or Health System' },
-                  { value: 'law_firm', label: '⚖️ Law Firm' }
-                ]}
-                mb="lg"
-                description="Select your role to customize the analysis and insights"
-              />
+            <Paper shadow="lg" p="xl" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', border: '2px solid #e2e8f0' }}>
+              <Grid gutter="xl" align="end">
+                {/* Step 1: User Type */}
+                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                  <Box>
+                    <Group mb="sm">
+                      <Box 
+                        style={{ 
+                          background: '#8b5cf6', 
+                          color: 'white', 
+                          borderRadius: '50%', 
+                          width: '28px', 
+                          height: '28px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        1
+                      </Box>
+                      <Title order={4} c="violet.7" size="md">Your Role</Title>
+                    </Group>
+
+                    <Select
+                      value={filters.user_type || 'individual_provider'}
+                      onChange={(value) => {
+                        setFilters({
+                          ...filters, 
+                          user_type: value as 'individual_provider' | 'provider_group' | 'law_firm'
+                        })
+                        // Clear relevant fields when switching types
+                        setPracticeName('')
+                        setEmailDomain('')
+                        setFacilityGroup('')
+                        setSelectedPractice(null)
+                      }}
+                      data={[
+                        { value: 'individual_provider', label: '🏥 Provider/Practice' },
+                        { value: 'provider_group', label: '🏢 Provider Group' },
+                        { value: 'law_firm', label: '⚖️ Law Firm' }
+                      ]}
+                      size="lg"
+                      styles={{
+                        input: { 
+                          borderWidth: '2px',
+                          fontSize: '16px',
+                          '&:focus': { borderColor: '#8b5cf6', boxShadow: '0 0 0 2px rgba(139, 92, 246, 0.2)' }
+                        }
+                      }}
+                    />
+                  </Box>
+                </Grid.Col>
+
+                {/* Step 2: Entity Identification */}
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                  <Box>
+                    <Group mb="sm">
+                      <Box 
+                        style={{ 
+                          background: '#10b981', 
+                          color: 'white', 
+                          borderRadius: '50%', 
+                          width: '28px', 
+                          height: '28px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        2
+                      </Box>
+                      <Title order={4} c="green.7" size="md">
+                        {filters.user_type === 'law_firm' ? 'Email Domain' :
+                         filters.user_type === 'provider_group' ? 'Group Name' :
+                         'Practice Name'}
+                      </Title>
+                    </Group>
+
+                    {/* Dynamic Input Fields */}
+                    {filters.user_type === 'individual_provider' && (
+                      <Autocomplete
+                        value={practiceName}
+                        onChange={(value) => {
+                          setPracticeName(value)
+                          if (practiceNameSuggestions.includes(value)) {
+                            handlePracticeSelection(value)
+                          }
+                          if (value && value.length >= 2) {
+                            setTimeout(() => searchPracticeNames(value), 300)
+                          } else {
+                            setPracticeNameSuggestions([])
+                            setPracticeData([])
+                            setSelectedPractice(null)
+                          }
+                        }}
+                        data={practiceNameSuggestions}
+                        placeholder="Type practice name..."
+                        size="lg"
+                        rightSection={practiceNameLoading ? <Loader size="xs" /> : undefined}
+                        styles={{
+                          input: { 
+                            borderWidth: '2px',
+                            fontSize: '16px',
+                            '&:focus': { borderColor: '#10b981', boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)' }
+                          }
+                        }}
+                      />
+                    )}
+
+                    {filters.user_type === 'law_firm' && (
+                      <Autocomplete
+                        value={emailDomain}
+                        onChange={(value) => {
+                          setEmailDomain(value)
+                          if (value && value.length >= 2) {
+                            setTimeout(() => searchEmailDomains(value), 300)
+                          } else {
+                            setEmailDomainSuggestions([])
+                          }
+                        }}
+                        data={emailDomainSuggestions}
+                        placeholder="Type email domain..."
+                        size="lg"
+                        rightSection={emailDomainLoading ? <Loader size="xs" /> : undefined}
+                        styles={{
+                          input: { 
+                            borderWidth: '2px',
+                            fontSize: '16px',
+                            '&:focus': { borderColor: '#10b981', boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)' }
+                          }
+                        }}
+                      />
+                    )}
+
+                    {filters.user_type === 'provider_group' && (
+                      <Autocomplete
+                        value={facilityGroup}
+                        onChange={(value) => {
+                          setFacilityGroup(value)
+                          if (value && value.length >= 2) {
+                            setTimeout(() => searchFacilityGroups(value), 300)
+                          } else {
+                            setFacilityGroupSuggestions([])
+                          }
+                        }}
+                        data={facilityGroupSuggestions}
+                        placeholder="Type group name..."
+                        size="lg"
+                        rightSection={facilityGroupLoading ? <Loader size="xs" /> : undefined}
+                        styles={{
+                          input: { 
+                            borderWidth: '2px',
+                            fontSize: '16px',
+                            '&:focus': { borderColor: '#10b981', boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)' }
+                          }
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Grid.Col>
+
+                {/* Step 3: Specialty Filter */}
+                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                  <Box>
+                    <Group mb="sm">
+                      <Box 
+                        style={{ 
+                          background: '#f59e0b', 
+                          color: 'white', 
+                          borderRadius: '50%', 
+                          width: '28px', 
+                          height: '28px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        3
+                      </Box>
+                      <Title order={4} c="yellow.7" size="md">
+                        {filters.user_type === 'individual_provider' ? 'Specialty *' : 'Focus (Optional)'}
+                      </Title>
+                    </Group>
+
+                    <Select
+                      value={filters.specialty || null}
+                      onChange={(value) => setFilters({...filters, specialty: value || undefined})}
+                      disabled={filtersLoading}
+                      placeholder={filters.user_type === 'individual_provider' ? 'Select specialty' : 'All specialties'}
+                      data={filterOptions.specialties.map(specialty => ({
+                        value: specialty,
+                        label: specialty.length > 30 ? `${specialty.substring(0, 30)}...` : specialty
+                      }))}
+                      searchable
+                      clearable
+                      size="lg"
+                      styles={{
+                        input: { 
+                          borderWidth: '2px',
+                          fontSize: '16px',
+                          '&:focus': { borderColor: '#f59e0b', boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.2)' }
+                        }
+                      }}
+                    />
+                  </Box>
+                </Grid.Col>
+
+                {/* Step 4: Run Analysis Button */}
+                <Grid.Col span={{ base: 12, md: 2 }}>
+                  <Button
+                    onClick={runBenchmarkAnalysis}
+                    disabled={loading || (
+                      filters.user_type === 'individual_provider' && !filters.specialty
+                    ) || (
+                      filters.user_type === 'law_firm' && !emailDomain.trim()
+                    ) || (
+                      filters.user_type === 'provider_group' && !facilityGroup.trim()
+                    )}
+                    loading={loading}
+                    size="xl"
+                    fullWidth
+                    h={80}
+                    styles={{
+                      root: {
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        borderRadius: '12px',
+                        border: '3px solid #065f46',
+                        boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
+                        '&:hover': {
+                          transform: 'translateY(-3px)',
+                          boxShadow: '0 12px 30px rgba(16, 185, 129, 0.5)'
+                        },
+                        '&:disabled': {
+                          background: '#9ca3af',
+                          transform: 'none',
+                          boxShadow: 'none'
+                        }
+                      }
+                    }}
+                  >
+                    {loading ? (
+                      <Stack gap="xs" align="center">
+                        <Loader size="sm" color="white" />
+                        <Text size="sm" c="white">Analyzing...</Text>
+                      </Stack>
+                    ) : (
+                      <Stack gap="xs" align="center">
+                        <Text size="xl">📊</Text>
+                        <Text size="md" fw="bold" c="white">ANALYZE</Text>
+                      </Stack>
+                    )}
+                  </Button>
+                </Grid.Col>
+              </Grid>
+            </Paper>
               
               {filtersError && (
                 <Alert 
@@ -510,190 +753,20 @@ export default function BenchmarkingDashboard() {
                   )}
                 </Alert>
               )}
-              
-              {/* Dynamic Input Fields Based on User Type */}
-              {filters.user_type === 'individual_provider' && (
-                <Autocomplete
-                label="Practice or Facility Name"
-                  value={practiceName}
-                onChange={(value) => {
-                  setPracticeName(value)
-                  // Handle selection from dropdown
-                  if (practiceNameSuggestions.includes(value)) {
-                    handlePracticeSelection(value)
-                  }
-                  // Debounce the search
-                  if (value && value.length >= 2) {
-                    setTimeout(() => searchPracticeNames(value), 300)
-                  } else {
-                    setPracticeNameSuggestions([])
-                    setPracticeData([])
-                    setSelectedPractice(null)
-                  }
-                }}
-                onFocus={() => {
-                  if (practiceName && practiceName.length >= 2) {
-                    searchPracticeNames(practiceName)
-                  }
-                }}
-                data={practiceNameSuggestions}
-                placeholder="Enter practice or facility name..."
-                mb="md"
-                description={selectedPractice 
-                  ? `Selected: ${selectedPractice.name} - Fields auto-populated below`
-                  : "Search for a specific practice/facility name to auto-populate other fields. Leave blank for broader analysis."
-                }
-                rightSection={practiceNameLoading ? <Loader size="xs" /> : undefined}
-                limit={10}
-                maxDropdownHeight={200}
-              />
-              )}
 
-              {filters.user_type === 'law_firm' && (
-                <Autocomplete
-                  label="Your Law Firm Email Domain"
-                  value={emailDomain}
-                  onChange={(value) => {
-                    setEmailDomain(value)
-                    // Debounce the search
-                    if (value && value.length >= 2) {
-                      setTimeout(() => searchEmailDomains(value), 300)
-                    } else {
-                      setEmailDomainSuggestions([])
-                    }
-                  }}
-                  onFocus={() => {
-                    if (emailDomain && emailDomain.length >= 2) {
-                      searchEmailDomains(emailDomain)
-                    }
-                  }}
-                  data={emailDomainSuggestions}
-                  placeholder="e.g., gottliebandgreenspan.com"
-                  mb="md"
-                  description="Enter your law firm's email domain to analyze all represented practices"
-                  rightSection={emailDomainLoading ? <Loader size="xs" /> : undefined}
-                  limit={10}
-                  maxDropdownHeight={200}
-                />
-              )}
+            {/* Optional Filters - Below main form */}
+            {(filters.specialty || filters.state || filters.practice_size) && (
+              <Paper p="lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid #fbbf24', borderRadius: '8px' }}>
+                <Title order={5} c="yellow.8" mb="xs">Active Filters:</Title>
+                <Group gap="sm">
+                  {filters.specialty && <Badge color="yellow" variant="light">{filters.specialty}</Badge>}
+                  {filters.state && <Badge color="yellow" variant="light">{filters.state}</Badge>}
+                  {filters.practice_size && <Badge color="yellow" variant="light">{filters.practice_size}</Badge>}
+                </Group>
+              </Paper>
+            )}
 
-              {filters.user_type === 'provider_group' && (
-                <Autocomplete
-                  label="Your Provider Group Name"
-                  value={facilityGroup}
-                  onChange={(value) => {
-                    setFacilityGroup(value)
-                    // Debounce the search
-                    if (value && value.length >= 2) {
-                      setTimeout(() => searchFacilityGroups(value), 300)
-                    } else {
-                      setFacilityGroupSuggestions([])
-                    }
-                  }}
-                  onFocus={() => {
-                    if (facilityGroup && facilityGroup.length >= 2) {
-                      searchFacilityGroups(facilityGroup)
-                    }
-                  }}
-                  data={facilityGroupSuggestions}
-                  placeholder="e.g., Empire Health System, Mayo Clinic, Kaiser"
-                  mb="md"
-                  description="Enter your provider group or health system name"
-                  rightSection={facilityGroupLoading ? <Loader size="xs" /> : undefined}
-                  limit={10}
-                  maxDropdownHeight={200}
-                />
-              )}
-
-              {/* Specialty */}
-              <Select
-                label={filters.user_type === 'individual_provider' ? 'Practice Specialty *' : 'Focus Specialty (Optional)'}
-                value={filters.specialty || null}
-                onChange={(value) => setFilters({...filters, specialty: value || undefined})}
-                  disabled={filtersLoading}
-                placeholder={filtersLoading ? 'Loading specialties...' : 
-                  filters.user_type === 'individual_provider' ? 'Select Specialty' : 'All Specialties (Optional)'
-                }
-                data={filterOptions.specialties.map(specialty => ({
-                  value: specialty,
-                  label: specialty.length > 40 ? `${specialty.substring(0, 40)}...` : specialty
-                }))}
-                searchable
-                clearable
-                mb="md"
-                description={
-                  filters.user_type === 'individual_provider' 
-                    ? `${filterOptions.metadata?.total_specialties || 0} specialties available`
-                    : 'Optional: Filter analysis to a specific specialty, or leave blank for all specialties'
-                }
-              />
-
-              {/* State */}
-              <Select
-                label={
-                  <Group gap="xs">
-                    <IconMapPin size={16} />
-                    <Text>Geographic Location</Text>
-                  </Group>
-                }
-                value={filters.state || null}
-                onChange={(value) => setFilters({...filters, state: value || undefined})}
-                  disabled={filtersLoading}
-                placeholder={filtersLoading ? 'Loading states...' : 'All States (Optional)'}
-                data={filterOptions.states.map(state => ({
-                  value: state.code,
-                  label: state.display
-                }))}
-                searchable
-                clearable
-                mb="md"
-                description="Leave blank to compare against all geographic locations"
-              />
-
-              {/* Practice Size */}
-              <Select
-                label={
-                  <Group gap="xs">
-                    <IconBuilding size={16} />
-                    <Text>Practice Size</Text>
-                  </Group>
-                }
-                value={filters.practice_size || null}
-                onChange={(value) => setFilters({...filters, practice_size: value || undefined})}
-                  disabled={filtersLoading}
-                placeholder={filtersLoading ? 'Loading sizes...' : 'All Sizes (Optional)'}
-                data={filterOptions.practice_sizes.map(size => ({
-                  value: size,
-                  label: size
-                }))}
-                clearable
-                mb="md"
-                description="Leave blank to compare against all practice sizes"
-              />
-
-              {/* Run Analysis Button */}
-              <Button
-                onClick={runBenchmarkAnalysis}
-                disabled={loading || (
-                  filters.user_type === 'individual_provider' && !filters.specialty
-                ) || (
-                  filters.user_type === 'law_firm' && !emailDomain.trim()
-                ) || (
-                  filters.user_type === 'provider_group' && !facilityGroup.trim()
-                )}
-                loading={loading}
-                color="green"
-                size="md"
-                fullWidth
-                leftSection={!loading ? '🚀' : undefined}
-              >
-                {loading ? 'Analyzing...' : 'Run Analysis'}
-              </Button>
-            </Paper>
-          </Grid.Col>
-
-          {/* Main Content */}
-          <Grid.Col span={{ base: 12, lg: 9 }}>
+            {/* Main Content */}
             {!providerMetrics ? (
               // Welcome State
               <Paper shadow="sm" p="xl" ta="center">
@@ -1121,9 +1194,8 @@ export default function BenchmarkingDashboard() {
                 </Paper>
               </Stack>
             )}
-          </Grid.Col>
-        </Grid>
-      </Container>
+          </Stack>
+        </Container>
       </Box>
       
       {/* Footer - Sticks to bottom */}
