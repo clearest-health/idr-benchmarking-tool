@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     }
 
     // Format the response
-    const domains = (data || []).map((item: any) => ({
+    const domains = (data || []).map((item: { domain: string; dispute_count: number }) => ({
       domain: item.domain,
       disputeCount: item.dispute_count,
       displayName: `${item.domain} - ${item.dispute_count} disputes`

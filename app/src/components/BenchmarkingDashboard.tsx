@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { BenchmarkingService } from '@/lib/benchmarking'
 import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
 import { usePostHog } from 'posthog-js/react'
@@ -12,7 +11,6 @@ import {
   Title,
   Text,
   Select,
-  TextInput,
   Button,
   Card,
   Group,
@@ -20,24 +18,16 @@ import {
   Badge,
   Loader,
   Alert,
-  MultiSelect,
-  Divider,
-  ActionIcon,
-  Tooltip as MantineTooltip,
   Box,
-  Flex,
   Autocomplete,
   Table
 } from '@mantine/core'
 import { 
   IconChartBar, 
-  IconMapPin, 
   IconBuilding,
   IconClock,
   IconCurrencyDollar,
   IconTrophy,
-  IconSearch,
-  IconX,
   IconAlertCircle
 } from '@tabler/icons-react'
 import {
@@ -48,8 +38,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell
 } from 'recharts'
 
@@ -70,6 +58,21 @@ interface FilterOptions {
   }
 }
 
+interface PracticeSearchResult {
+  name: string
+  specialty: string
+  location: string
+  size: string
+}
+
+interface EmailDomainResult {
+  domain: string
+}
+
+interface FacilityGroupResult {
+  name: string
+}
+
 interface Insight {
   type: 'success' | 'warning' | 'info'
   title: string
@@ -78,7 +81,6 @@ interface Insight {
 
 export default function BenchmarkingDashboard() {
   const posthog = usePostHog()
-  const searchParams = useSearchParams()
   
   const [filters, setFilters] = useState<BenchmarkFilters>({
     quarter: '2024-Q4',
@@ -179,7 +181,7 @@ export default function BenchmarkingDashboard() {
         handlePracticeSelection(exactMatch.name)
       }
     }
-  }, [practiceData, practiceName, selectedPractice, filterOptions.specialties])
+  }, [practiceData, practiceName, selectedPractice, filterOptions.specialties, handlePracticeSelection])
 
   // Load filter options on component mount
   useEffect(() => {
@@ -248,7 +250,7 @@ export default function BenchmarkingDashboard() {
 
       if (data.practices) {
         setPracticeData(data.practices)
-        setPracticeNameSuggestions(data.practices.map((p: any) => p.name))
+        setPracticeNameSuggestions(data.practices.map((p: PracticeSearchResult) => p.name))
       }
     } catch (error) {
       console.error('Error searching practice names:', error)
@@ -312,7 +314,7 @@ export default function BenchmarkingDashboard() {
       const data = await response.json()
 
       if (data.domains) {
-        setEmailDomainSuggestions(data.domains.map((d: any) => d.domain))
+        setEmailDomainSuggestions(data.domains.map((d: EmailDomainResult) => d.domain))
       }
     } catch (error) {
       console.error('Error searching email domains:', error)
@@ -334,7 +336,7 @@ export default function BenchmarkingDashboard() {
       const data = await response.json()
 
       if (data.groups) {
-        setFacilityGroupSuggestions(data.groups.map((g: any) => g.name))
+        setFacilityGroupSuggestions(data.groups.map((g: FacilityGroupResult) => g.name))
       }
     } catch (error) {
       console.error('Error searching facility groups:', error)
@@ -799,7 +801,7 @@ export default function BenchmarkingDashboard() {
                 </Title>
                 <Box maw={800} mx="auto" c="gray.6">
                   <Text size="lg" mb="xl">
-                    We've been studying IDR outcomes and have identified patterns in why some groups lose or waste money in arbitration.
+                    We&apos;ve been studying IDR outcomes and have identified patterns in why some groups lose or waste money in arbitration.
                   </Text>
                   <Grid mt="xl">
                     <Grid.Col span={{ base: 12, md: 6 }}>
@@ -1068,13 +1070,13 @@ export default function BenchmarkingDashboard() {
                         </Title>
                         <Text size="sm" c="gray.6" component="ul" style={{ listStyleType: 'none', padding: 0 }}>
                           {filters.user_type === 'law_firm' && emailDomain.trim() && (
-                            <li>• Email Domain: "{emailDomain.trim()}"</li>
+                            <li>• Email Domain: &quot;{emailDomain.trim()}&quot;</li>
                           )}
                           {filters.user_type === 'provider_group' && facilityGroup.trim() && (
-                            <li>• Provider Group: "{facilityGroup.trim()}"</li>
+                            <li>• Provider Group: &quot;{facilityGroup.trim()}&quot;</li>
                           )}
                           {filters.user_type === 'individual_provider' && practiceName.trim() && (
-                            <li>• Practice Name: "{practiceName.trim()}"</li>
+                            <li>• Practice Name: &quot;{practiceName.trim()}&quot;</li>
                           )}
                           <li>• Focus Specialty: {filters.specialty || 'All Specialties'}</li>
                           <li>• Location: {filters.state || 'All States (not specified)'}</li>

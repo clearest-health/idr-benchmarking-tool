@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Determine which stored procedure to call based on user type
     let procedureName = 'get_provider_benchmark'
-    let params: any = {}
+    let params: Record<string, unknown> = {}
 
     switch (filters.user_type) {
       case 'law_firm':

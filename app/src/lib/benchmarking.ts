@@ -1,7 +1,7 @@
 import { supabase, BenchmarkMetrics, BenchmarkFilters } from './supabase'
 
 // Simple in-memory cache for filter options
-const filterCache = new Map<string, { data: any; timestamp: number }>()
+const filterCache = new Map<string, { data: unknown; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export class BenchmarkingService {
