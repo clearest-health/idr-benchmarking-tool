@@ -846,17 +846,17 @@ export default function BenchmarkingDashboard() {
                   </Title>
                   
                   <Grid>
-                    {/* Top Row - Win Rate and Average Offer (50% each) */}
-                    <Grid.Col span={6}>
-                      <Card bg="green.0" p="lg" h={120}>
-                        <Group align="center" h="100%">
-                          <IconTrophy size={32} color="var(--mantine-color-green-6)" />
-                          <div>
+                    {/* Top Row - Win Rate and Average Offer */}
+                    <Grid.Col span={{ base: 12, sm: 6 }}>
+                      <Card bg="green.0" p={{ base: "sm", sm: "md", md: "lg" }} style={{ minHeight: '100px' }}>
+                        <Group align="center" gap="sm">
+                          <IconTrophy size={28} color="var(--mantine-color-green-6)" />
+                          <div style={{ flex: 1 }}>
                             <Text size="sm" fw={500} c="green.9">Win Rate</Text>
-                            <Text size="2xl" fw={700} c="green.6">
+                            <Text size="xl" fw={700} c="green.6" style={{ lineHeight: 1.2 }}>
                               {providerMetrics.provider_win_rate.toFixed(1)}%
                             </Text>
-                            <Text size="xs" c="green.7">
+                            <Text size="xs" c="green.7" style={{ lineHeight: 1.3 }}>
                               {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
                               {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
                             </Text>
@@ -865,13 +865,13 @@ export default function BenchmarkingDashboard() {
                       </Card>
                     </Grid.Col>
 
-                    <Grid.Col span={6}>
-                      <Card bg="blue.0" p="lg" h={120}>
-                        <Group align="center" h="100%">
-                          <IconCurrencyDollar size={32} color="var(--mantine-color-blue-6)" />
-                          <div>
+                    <Grid.Col span={{ base: 12, sm: 6 }}>
+                      <Card bg="blue.0" p={{ base: "sm", sm: "md", md: "lg" }} style={{ minHeight: '100px' }}>
+                        <Group align="center" gap="sm">
+                          <IconCurrencyDollar size={28} color="var(--mantine-color-blue-6)" />
+                          <div style={{ flex: 1 }}>
                             <Text size="sm" fw={500} c="blue.9">Avg Offer</Text>
-                            <Text size="2xl" fw={700} c="blue.6">
+                            <Text size="xl" fw={700} c="blue.6" style={{ lineHeight: 1.2 }}>
                               {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
                             </Text>
                             <Text size="xs" c="blue.7">QPA</Text>
@@ -880,14 +880,14 @@ export default function BenchmarkingDashboard() {
                       </Card>
                     </Grid.Col>
 
-                    {/* Bottom Row - Three cards (33% each) */}
-                    <Grid.Col span={4}>
-                      <Card bg="violet.0" p="md" h={100}>
-                        <Group align="center" h="100%">
-                          <IconClock size={28} color="var(--mantine-color-violet-6)" />
-                          <div>
+                    {/* Bottom Row - Three cards */}
+                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                      <Card bg="violet.0" p={{ base: "sm", md: "md" }} style={{ minHeight: '80px' }}>
+                        <Group align="center" gap="sm">
+                          <IconClock size={24} color="var(--mantine-color-violet-6)" />
+                          <div style={{ flex: 1 }}>
                             <Text size="sm" fw={500} c="violet.9">Resolution</Text>
-                            <Text size="xl" fw={700} c="violet.6">
+                            <Text size="lg" fw={700} c="violet.6" style={{ lineHeight: 1.2 }}>
                               {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
                             </Text>
                             <Text size="xs" c="violet.7">days</Text>
@@ -896,19 +896,19 @@ export default function BenchmarkingDashboard() {
                       </Card>
                     </Grid.Col>
 
-                    <Grid.Col span={4}>
-                      <Card bg="orange.0" p="md" h={100}>
-                        <Group align="center" h="100%">
-                          <IconChartBar size={28} color="var(--mantine-color-orange-6)" />
-                          <div>
+                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                      <Card bg="orange.0" p={{ base: "sm", md: "md" }} style={{ minHeight: '80px' }}>
+                        <Group align="center" gap="sm">
+                          <IconChartBar size={24} color="var(--mantine-color-orange-6)" />
+                          <div style={{ flex: 1 }}>
                             <Text size="sm" fw={500} c="orange.9">
                               {filters.user_type === 'law_firm' ? 'Total Disputes' : 
                                filters.user_type === 'provider_group' ? 'Total Disputes' : 'Disputes'}
                             </Text>
-                            <Text size="xl" fw={700} c="orange.6">
+                            <Text size="lg" fw={700} c="orange.6" style={{ lineHeight: 1.2 }}>
                               {providerMetrics.total_disputes.toLocaleString()}
                             </Text>
-                            <Text size="xs" c="orange.7">
+                            <Text size="xs" c="orange.7" style={{ lineHeight: 1.3 }}>
                               {filters.user_type === 'law_firm' ? 'across all clients' :
                                filters.user_type === 'provider_group' ? 'across all facilities' : 'analyzed'}
                             </Text>
@@ -918,23 +918,23 @@ export default function BenchmarkingDashboard() {
                     </Grid.Col>
 
                     {/* Additional Metrics for all user types */}
-                    <Grid.Col span={4}>
-                      <Card bg="teal.0" p="md" h={100}>
-                        <Group align="center" h="100%">
-                          <IconBuilding size={28} color="var(--mantine-color-teal-6)" />
-                          <div>
+                    <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
+                      <Card bg="teal.0" p={{ base: "sm", md: "md" }} style={{ minHeight: '80px' }}>
+                        <Group align="center" gap="sm">
+                          <IconBuilding size={24} color="var(--mantine-color-teal-6)" />
+                          <div style={{ flex: 1 }}>
                             <Text size="sm" fw={500} c="teal.9">
                               {filters.user_type === 'law_firm' ? 'Practices' : 
                                filters.user_type === 'provider_group' ? 'Facilities' : 'Providers'}
                             </Text>
-                            <Text size="xl" fw={700} c="teal.6">
+                            <Text size="lg" fw={700} c="teal.6" style={{ lineHeight: 1.2 }}>
                               {filters.user_type === 'law_firm' ? 
                                 (providerMetrics.total_practices?.toLocaleString() || '0') :
                                 filters.user_type === 'provider_group' ?
                                 (providerMetrics.total_facilities?.toLocaleString() || '0') : '1'
                               }
                             </Text>
-                            <Text size="xs" c="teal.7">
+                            <Text size="xs" c="teal.7" style={{ lineHeight: 1.3 }}>
                               {filters.user_type === 'law_firm' ? 'represented' : 
                                filters.user_type === 'provider_group' ? 'in network' : 'analyzed'}
                             </Text>
