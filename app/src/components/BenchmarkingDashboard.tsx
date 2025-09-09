@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { BenchmarkingService } from '@/lib/benchmarking'
 import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
 import { usePostHog } from 'posthog-js/react'
-import {
+import { 
   Container,
   Grid,
   Paper,
@@ -79,7 +79,8 @@ export default function BenchmarkingDashboard() {
   const posthog = usePostHog()
   
   const [filters, setFilters] = useState<BenchmarkFilters>({
-    quarter: '2024-Q4'
+    quarter: '2024-Q4',
+    user_type: 'individual_provider'
   })
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     specialties: [],
@@ -93,8 +94,14 @@ export default function BenchmarkingDashboard() {
   const [filtersLoading, setFiltersLoading] = useState(true)
   const [filtersError, setFiltersError] = useState<string | null>(null)
   const [practiceName, setPracticeName] = useState('')
+  const [emailDomain, setEmailDomain] = useState('')
+  const [facilityGroup, setFacilityGroup] = useState('')
   const [practiceNameSuggestions, setPracticeNameSuggestions] = useState<string[]>([])
   const [practiceNameLoading, setPracticeNameLoading] = useState(false)
+  const [emailDomainSuggestions, setEmailDomainSuggestions] = useState<string[]>([])
+  const [emailDomainLoading, setEmailDomainLoading] = useState(false)
+  const [facilityGroupSuggestions, setFacilityGroupSuggestions] = useState<string[]>([])
+  const [facilityGroupLoading, setFacilityGroupLoading] = useState(false)
   const [practiceData, setPracticeData] = useState<Array<{
     name: string
     specialty: string
@@ -264,9 +271,64 @@ export default function BenchmarkingDashboard() {
     }
   }
 
+  // Search for email domains
+  const searchEmailDomains = async (query: string) => {
+    if (!query || query.length < 2) {
+      setEmailDomainSuggestions([])
+      return
+    }
+
+    try {
+      setEmailDomainLoading(true)
+      const response = await fetch(`/api/email-domain-search?q=${encodeURIComponent(query)}&limit=10`)
+      const data = await response.json()
+
+      if (data.domains) {
+        setEmailDomainSuggestions(data.domains.map((d: any) => d.domain))
+      }
+    } catch (error) {
+      console.error('Error searching email domains:', error)
+    } finally {
+      setEmailDomainLoading(false)
+    }
+  }
+
+  // Search for facility groups
+  const searchFacilityGroups = async (query: string) => {
+    if (!query || query.length < 2) {
+      setFacilityGroupSuggestions([])
+      return
+    }
+
+    try {
+      setFacilityGroupLoading(true)
+      const response = await fetch(`/api/facility-group-search?q=${encodeURIComponent(query)}&limit=10`)
+      const data = await response.json()
+
+      if (data.groups) {
+        setFacilityGroupSuggestions(data.groups.map((g: any) => g.name))
+      }
+    } catch (error) {
+      console.error('Error searching facility groups:', error)
+    } finally {
+      setFacilityGroupLoading(false)
+    }
+  }
+
   const runBenchmarkAnalysis = async () => {
-    if (!filters.specialty) {
+    // Validation based on user type
+    if (filters.user_type === 'individual_provider' && !filters.specialty) {
       alert('Please select a specialty to run the analysis')
+      return
+    }
+    
+    if (filters.user_type === 'law_firm' && !emailDomain.trim()) {
+      alert('Please enter your law firm email domain to run the analysis')
+      return
+    }
+    
+    if (filters.user_type === 'provider_group' && !facilityGroup.trim()) {
+      alert('Please enter your provider group name to run the analysis')
       return
     }
 
@@ -281,10 +343,12 @@ export default function BenchmarkingDashboard() {
 
     setLoading(true)
     try {
-      // Include practice name in filters for provider-specific analysis
+      // Include appropriate identifier based on user type
       const providerFilters = {
         ...filters,
-        practice_name: practiceName.trim() || undefined
+        practice_name: filters.user_type === 'individual_provider' ? (practiceName.trim() || undefined) : undefined,
+        email_domain: filters.user_type === 'law_firm' ? (emailDomain.trim() || undefined) : undefined,
+        facility_group: filters.user_type === 'provider_group' ? (facilityGroup.trim() || undefined) : undefined
       }
 
       const [providerData, peerData] = await Promise.all([
@@ -307,8 +371,12 @@ export default function BenchmarkingDashboard() {
       setProviderMetrics(providerData)
       setPeerMetrics(peerData)
       
-      // Generate insights
-      const generatedInsights = BenchmarkingService.generateInsights(providerData, peerData)
+      // Generate insights based on user type
+      const generatedInsights = BenchmarkingService.generateInsights(
+        providerData, 
+        peerData, 
+        filters.user_type || 'individual_provider'
+      )
       setInsights(generatedInsights)
 
       // Track successful analysis
@@ -380,9 +448,9 @@ export default function BenchmarkingDashboard() {
                 Free IDR Benchmarking Tool
               </Title>
               <Text size="sm" c="gray.6" mt={4}>
-                Compare your IDR performance against peer providers
+              Compare your IDR performance against peer providers
               </Text>
-            </div>
+          </div>
           </Group>
         </Container>
       </Paper>
@@ -391,12 +459,36 @@ export default function BenchmarkingDashboard() {
       <Box style={{ flex: 1 }}>
         <Container size="xl" py="lg">
           <Grid>
-            {/* Sidebar - Filters */}
+          {/* Sidebar - Filters */}
             <Grid.Col span={{ base: 12, lg: 3 }}>
-              <Paper shadow="sm" p="lg">
-                <Title order={2} size="lg" c="gray.9" mb="md">
-                  🎯 Define Your Practice Profile
-                </Title>
+            <Paper shadow="sm" p="lg">
+              <Title order={2} size="lg" c="gray.9" mb="md">
+                🎯 Define Your Profile
+              </Title>
+
+              {/* User Type Selection */}
+              <Select
+                label="I am a:"
+                value={filters.user_type || 'individual_provider'}
+                onChange={(value) => {
+                  setFilters({
+                    ...filters, 
+                    user_type: value as 'individual_provider' | 'provider_group' | 'law_firm'
+                  })
+                  // Clear relevant fields when switching types
+                  setPracticeName('')
+                  setEmailDomain('')
+                  setFacilityGroup('')
+                  setSelectedPractice(null)
+                }}
+                data={[
+                  { value: 'individual_provider', label: '🏥 Individual Provider or Practice' },
+                  { value: 'provider_group', label: '🏢 Provider Group or Health System' },
+                  { value: 'law_firm', label: '⚖️ Law Firm' }
+                ]}
+                mb="lg"
+                description="Select your role to customize the analysis and insights"
+              />
               
               {filtersError && (
                 <Alert 
@@ -419,10 +511,11 @@ export default function BenchmarkingDashboard() {
                 </Alert>
               )}
               
-              {/* Practice Name */}
-              <Autocomplete
-                label="Practice Name"
-                value={practiceName}
+              {/* Dynamic Input Fields Based on User Type */}
+              {filters.user_type === 'individual_provider' && (
+                <Autocomplete
+                label="Practice or Facility Name"
+                  value={practiceName}
                 onChange={(value) => {
                   setPracticeName(value)
                   // Handle selection from dropdown
@@ -454,14 +547,73 @@ export default function BenchmarkingDashboard() {
                 limit={10}
                 maxDropdownHeight={200}
               />
+              )}
+
+              {filters.user_type === 'law_firm' && (
+                <Autocomplete
+                  label="Your Law Firm Email Domain"
+                  value={emailDomain}
+                  onChange={(value) => {
+                    setEmailDomain(value)
+                    // Debounce the search
+                    if (value && value.length >= 2) {
+                      setTimeout(() => searchEmailDomains(value), 300)
+                    } else {
+                      setEmailDomainSuggestions([])
+                    }
+                  }}
+                  onFocus={() => {
+                    if (emailDomain && emailDomain.length >= 2) {
+                      searchEmailDomains(emailDomain)
+                    }
+                  }}
+                  data={emailDomainSuggestions}
+                  placeholder="e.g., gottliebandgreenspan.com"
+                  mb="md"
+                  description="Enter your law firm's email domain to analyze all represented practices"
+                  rightSection={emailDomainLoading ? <Loader size="xs" /> : undefined}
+                  limit={10}
+                  maxDropdownHeight={200}
+                />
+              )}
+
+              {filters.user_type === 'provider_group' && (
+                <Autocomplete
+                  label="Your Provider Group Name"
+                  value={facilityGroup}
+                  onChange={(value) => {
+                    setFacilityGroup(value)
+                    // Debounce the search
+                    if (value && value.length >= 2) {
+                      setTimeout(() => searchFacilityGroups(value), 300)
+                    } else {
+                      setFacilityGroupSuggestions([])
+                    }
+                  }}
+                  onFocus={() => {
+                    if (facilityGroup && facilityGroup.length >= 2) {
+                      searchFacilityGroups(facilityGroup)
+                    }
+                  }}
+                  data={facilityGroupSuggestions}
+                  placeholder="e.g., Empire Health System, Mayo Clinic, Kaiser"
+                  mb="md"
+                  description="Enter your provider group or health system name"
+                  rightSection={facilityGroupLoading ? <Loader size="xs" /> : undefined}
+                  limit={10}
+                  maxDropdownHeight={200}
+                />
+              )}
 
               {/* Specialty */}
               <Select
-                label="Practice Specialty *"
+                label={filters.user_type === 'individual_provider' ? 'Practice Specialty *' : 'Focus Specialty (Optional)'}
                 value={filters.specialty || null}
                 onChange={(value) => setFilters({...filters, specialty: value || undefined})}
-                disabled={filtersLoading}
-                placeholder={filtersLoading ? 'Loading specialties...' : 'Select Specialty'}
+                  disabled={filtersLoading}
+                placeholder={filtersLoading ? 'Loading specialties...' : 
+                  filters.user_type === 'individual_provider' ? 'Select Specialty' : 'All Specialties (Optional)'
+                }
                 data={filterOptions.specialties.map(specialty => ({
                   value: specialty,
                   label: specialty.length > 40 ? `${specialty.substring(0, 40)}...` : specialty
@@ -469,10 +621,10 @@ export default function BenchmarkingDashboard() {
                 searchable
                 clearable
                 mb="md"
-                description={filterOptions.metadata?.total_specialties ? 
-                  `${filterOptions.metadata.total_specialties} specialties available${
-                    filterOptions.metadata?.using_sample_data ? ' (sample data - database empty)' : ''
-                  }` : undefined
+                description={
+                  filters.user_type === 'individual_provider' 
+                    ? `${filterOptions.metadata?.total_specialties || 0} specialties available`
+                    : 'Optional: Filter analysis to a specific specialty, or leave blank for all specialties'
                 }
               />
 
@@ -486,7 +638,7 @@ export default function BenchmarkingDashboard() {
                 }
                 value={filters.state || null}
                 onChange={(value) => setFilters({...filters, state: value || undefined})}
-                disabled={filtersLoading}
+                  disabled={filtersLoading}
                 placeholder={filtersLoading ? 'Loading states...' : 'All States (Optional)'}
                 data={filterOptions.states.map(state => ({
                   value: state.code,
@@ -508,7 +660,7 @@ export default function BenchmarkingDashboard() {
                 }
                 value={filters.practice_size || null}
                 onChange={(value) => setFilters({...filters, practice_size: value || undefined})}
-                disabled={filtersLoading}
+                  disabled={filtersLoading}
                 placeholder={filtersLoading ? 'Loading sizes...' : 'All Sizes (Optional)'}
                 data={filterOptions.practice_sizes.map(size => ({
                   value: size,
@@ -522,7 +674,13 @@ export default function BenchmarkingDashboard() {
               {/* Run Analysis Button */}
               <Button
                 onClick={runBenchmarkAnalysis}
-                disabled={loading || !filters.specialty}
+                disabled={loading || (
+                  filters.user_type === 'individual_provider' && !filters.specialty
+                ) || (
+                  filters.user_type === 'law_firm' && !emailDomain.trim()
+                ) || (
+                  filters.user_type === 'provider_group' && !facilityGroup.trim()
+                )}
                 loading={loading}
                 color="green"
                 size="md"
@@ -584,7 +742,11 @@ export default function BenchmarkingDashboard() {
                 {/* Performance Summary */}
                 <Paper shadow="sm" p="lg">
                   <Title order={2} size="xl" c="gray.9" mb="md">
-                    📊 Performance Summary: {practiceName.trim() || 'Your Practice'}
+                    📊 Performance Summary: {
+                      filters.user_type === 'law_firm' ? (emailDomain.trim() || 'Your Law Firm') :
+                      filters.user_type === 'provider_group' ? (facilityGroup.trim() || 'Your Provider Group') :
+                      (practiceName.trim() || 'Your Practice')
+                    }
                   </Title>
                   
                   <Grid>
@@ -595,13 +757,13 @@ export default function BenchmarkingDashboard() {
                           <div>
                             <Text size="sm" fw={500} c="green.9">Win Rate</Text>
                             <Text size="xl" fw={700} c="green.6">
-                              {providerMetrics.provider_win_rate.toFixed(1)}%
+                            {providerMetrics.provider_win_rate.toFixed(1)}%
                             </Text>
                             <Text size="xs" c="green.7">
-                              {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
-                              {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
+                            {peerMetrics && (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate) > 0 ? '+' : ''}
+                            {peerMetrics ? (providerMetrics.provider_win_rate - peerMetrics.provider_win_rate).toFixed(1) : '0.0'}pp vs peers
                             </Text>
-                          </div>
+                        </div>
                         </Group>
                       </Card>
                     </Grid.Col>
@@ -613,10 +775,10 @@ export default function BenchmarkingDashboard() {
                           <div>
                             <Text size="sm" fw={500} c="blue.9">Avg Offer</Text>
                             <Text size="xl" fw={700} c="blue.6">
-                              {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
+                            {providerMetrics.avg_provider_offer_pct?.toFixed(0) || 'N/A'}%
                             </Text>
                             <Text size="xs" c="blue.7">QPA</Text>
-                          </div>
+                        </div>
                         </Group>
                       </Card>
                     </Grid.Col>
@@ -628,10 +790,10 @@ export default function BenchmarkingDashboard() {
                           <div>
                             <Text size="sm" fw={500} c="violet.9">Resolution</Text>
                             <Text size="xl" fw={700} c="violet.6">
-                              {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
+                            {providerMetrics.median_resolution_days?.toFixed(0) || 'N/A'}
                             </Text>
                             <Text size="xs" c="violet.7">days</Text>
-                          </div>
+                        </div>
                         </Group>
                       </Card>
                     </Grid.Col>
@@ -641,15 +803,46 @@ export default function BenchmarkingDashboard() {
                         <Group align="center">
                           <IconChartBar size={32} color="var(--mantine-color-orange-6)" />
                           <div>
-                            <Text size="sm" fw={500} c="orange.9">Disputes</Text>
-                            <Text size="xl" fw={700} c="orange.6">
-                              {providerMetrics.total_disputes.toLocaleString()}
+                            <Text size="sm" fw={500} c="orange.9">
+                              {filters.user_type === 'law_firm' ? 'Total Disputes' : 
+                               filters.user_type === 'provider_group' ? 'Total Disputes' : 'Disputes'}
                             </Text>
-                            <Text size="xs" c="orange.7">analyzed</Text>
-                          </div>
+                            <Text size="xl" fw={700} c="orange.6">
+                            {providerMetrics.total_disputes.toLocaleString()}
+                            </Text>
+                            <Text size="xs" c="orange.7">
+                              {filters.user_type === 'law_firm' ? 'across all clients' :
+                               filters.user_type === 'provider_group' ? 'across all facilities' : 'analyzed'}
+                            </Text>
+                        </div>
                         </Group>
                       </Card>
                     </Grid.Col>
+
+                    {/* Additional Metrics for Law Firms and Provider Groups */}
+                    {(filters.user_type === 'law_firm' || filters.user_type === 'provider_group') && (
+                      <Grid.Col span={{ base: 12, md: 6, lg: 3 }}>
+                        <Card bg="teal.0" p="md">
+                          <Group align="center">
+                            <IconBuilding size={32} color="var(--mantine-color-teal-6)" />
+                            <div>
+                              <Text size="sm" fw={500} c="teal.9">
+                                {filters.user_type === 'law_firm' ? 'Practices' : 'Facilities'}
+                              </Text>
+                              <Text size="xl" fw={700} c="teal.6">
+                                {filters.user_type === 'law_firm' ? 
+                                  (providerMetrics.total_practices?.toLocaleString() || '0') :
+                                  (providerMetrics.total_facilities?.toLocaleString() || '0')
+                                }
+                              </Text>
+                              <Text size="xs" c="teal.7">
+                                {filters.user_type === 'law_firm' ? 'represented' : 'in network'}
+                              </Text>
+                      </div>
+                          </Group>
+                        </Card>
+                      </Grid.Col>
+                    )}
                   </Grid>
                 </Paper>
 
@@ -667,9 +860,9 @@ export default function BenchmarkingDashboard() {
                           Win Rate (%)
                         </Title>
                         <Box h={200}>
-                          <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={winRateData}>
-                              <CartesianGrid strokeDasharray="3 3" />
+                        <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="name" fontSize={12} />
                               <YAxis domain={[0, 100]} />
                               <Tooltip formatter={(value) => [`${value}%`, 'Win Rate']} />
@@ -695,15 +888,15 @@ export default function BenchmarkingDashboard() {
                             <BarChart data={offerData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="name" fontSize={12} />
-                              <YAxis />
+                        <YAxis />
                               <Tooltip formatter={(value) => [`${value}%`, 'Offer % QPA']} />
                               <Bar dataKey="value">
                                 {offerData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
                                 ))}
                               </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                      </BarChart>
+                    </ResponsiveContainer>
                         </Box>
                       </Box>
                     </Grid.Col>
@@ -715,19 +908,19 @@ export default function BenchmarkingDashboard() {
                           Resolution Time (Days)
                         </Title>
                         <Box h={200}>
-                          <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={resolutionData}>
-                              <CartesianGrid strokeDasharray="3 3" />
+                        <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="name" fontSize={12} />
-                              <YAxis />
+                        <YAxis />
                               <Tooltip formatter={(value) => [`${value}`, 'Days']} />
                               <Bar dataKey="value">
                                 {resolutionData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={index === 0 ? PRACTICE_COLOR : PEER_COLOR} />
                                 ))}
                               </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
+                      </BarChart>
+                    </ResponsiveContainer>
                         </Box>
                       </Box>
                     </Grid.Col>
@@ -759,8 +952,8 @@ export default function BenchmarkingDashboard() {
                     ))}
                   </Stack>
                 </Paper>  
-                    
-                    {/* Analysis Parameters */}
+
+                {/* Analysis Parameters */}
                 <Paper shadow="sm" p="lg">
                   <Title order={3} size="lg" c="gray.9" mb="md">
                     🎯 Analysis Parameters
@@ -769,13 +962,36 @@ export default function BenchmarkingDashboard() {
                   <Grid>
                     <Grid.Col span={{ base: 12, md: 6 }}>
                       <Box>
-                        <Title order={4} size="md" c="gray.9" mb="xs">Your Practice Profile:</Title>
+                        <Title order={4} size="md" c="gray.9" mb="xs">
+                          {filters.user_type === 'law_firm' ? 'Your Law Firm Profile:' :
+                           filters.user_type === 'provider_group' ? 'Your Provider Group Profile:' :
+                           'Your Practice Profile:'}
+                        </Title>
                         <Text size="sm" c="gray.6" component="ul" style={{ listStyleType: 'none', padding: 0 }}>
-                          <li>• Specialty: {filters.specialty}</li>
-                          <li>• Location: {filters.state || 'All States (not specified)'}</li>
-                          <li>• Size: {filters.practice_size || 'All Sizes (not specified)'}</li>
-                          {practiceName.trim() && (
+                          {filters.user_type === 'law_firm' && emailDomain.trim() && (
+                            <li>• Email Domain: "{emailDomain.trim()}"</li>
+                          )}
+                          {filters.user_type === 'provider_group' && facilityGroup.trim() && (
+                            <li>• Provider Group: "{facilityGroup.trim()}"</li>
+                          )}
+                          {filters.user_type === 'individual_provider' && practiceName.trim() && (
                             <li>• Practice Name: "{practiceName.trim()}"</li>
+                          )}
+                          <li>• Focus Specialty: {filters.specialty || 'All Specialties'}</li>
+                          <li>• Location: {filters.state || 'All States (not specified)'}</li>
+                          {filters.user_type === 'individual_provider' && (
+                            <li>• Size: {filters.practice_size || 'All Sizes (not specified)'}</li>
+                          )}
+                          {(filters.user_type === 'law_firm' || filters.user_type === 'provider_group') && providerMetrics && (
+                            <>
+                              <li>• {filters.user_type === 'law_firm' ? 'Practices' : 'Facilities'}: {
+                                filters.user_type === 'law_firm' ? 
+                                  (providerMetrics.total_practices?.toLocaleString() || '0') :
+                                  (providerMetrics.total_facilities?.toLocaleString() || '0')
+                              }</li>
+                              <li>• Specialties: {providerMetrics.specialties_represented || 0}</li>
+                              <li>• States: {providerMetrics.states_represented || 0}</li>
+                            </>
                           )}
                         </Text>
                       </Box>
@@ -785,10 +1001,28 @@ export default function BenchmarkingDashboard() {
                       <Box>
                         <Title order={4} size="md" c="gray.9" mb="xs">Peer Comparison Group:</Title>
                         <Text size="sm" c="gray.6" component="ul" style={{ listStyleType: 'none', padding: 0 }}>
-                          <li>• Same specialty: {filters.specialty}</li>
-                          <li>• All locations (broader scope)</li>
-                          <li>• All practice sizes</li>
-                          <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
+                          {filters.user_type === 'law_firm' ? (
+                            <>
+                              <li>• All law firms in IDR market</li>
+                              <li>• {filters.specialty ? `Focus: ${filters.specialty}` : 'All specialties'}</li>
+                              <li>• All geographic locations</li>
+                              <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
+                            </>
+                          ) : filters.user_type === 'provider_group' ? (
+                            <>
+                              <li>• All provider groups/health systems</li>
+                              <li>• {filters.specialty ? `Focus: ${filters.specialty}` : 'All specialties'}</li>
+                              <li>• All geographic locations</li>
+                              <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
+                            </>
+                          ) : (
+                            <>
+                        <li>• Same specialty: {filters.specialty}</li>
+                        <li>• All locations (broader scope)</li>
+                        <li>• All practice sizes</li>
+                        <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
+                            </>
+                          )}
                         </Text>
                       </Box>
                     </Grid.Col>

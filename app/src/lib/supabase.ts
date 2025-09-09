@@ -68,6 +68,11 @@ export interface BenchmarkMetrics {
   avg_winning_offer_pct: number
   median_resolution_days: number
   avg_idre_compensation: number
+  // Additional fields for law firms and provider groups
+  total_practices?: number
+  total_facilities?: number
+  specialties_represented?: number
+  states_represented?: number
 }
 
 export interface BenchmarkFilters {
@@ -76,4 +81,7 @@ export interface BenchmarkFilters {
   practice_size?: string
   quarter?: string
   practice_name?: string
+  user_type?: 'individual_provider' | 'provider_group' | 'law_firm'
+  email_domain?: string
+  facility_group?: string
 }

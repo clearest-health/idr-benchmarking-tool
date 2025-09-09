@@ -256,7 +256,10 @@ BEGIN
             SELECT 
                 COUNT(*)::BIGINT as total_disputes,
                 ROUND(
-                    (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*)), 
+                    CASE 
+                        WHEN COUNT(*) = 0 THEN 0
+                        ELSE (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*))
+                    END, 
                     2
                 ) as provider_win_rate,
                 ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
@@ -278,7 +281,10 @@ BEGIN
         SELECT 
             COUNT(*)::BIGINT as total_disputes,
             ROUND(
-                (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*)), 
+                CASE 
+                    WHEN COUNT(*) = 0 THEN 0
+                    ELSE (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*))
+                END, 
                 2
             ) as provider_win_rate,
             ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
@@ -303,7 +309,10 @@ BEGIN
     SELECT 
         COUNT(*)::BIGINT as total_disputes,
         ROUND(
-            (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*)), 
+            CASE 
+                WHEN COUNT(*) = 0 THEN 0
+                ELSE (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*))
+            END, 
             2
         ) as provider_win_rate,
         ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
@@ -316,6 +325,94 @@ BEGIN
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state)
         AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function for law firm benchmarking (by email domain)
+CREATE OR REPLACE FUNCTION get_law_firm_benchmark(
+    p_email_domain VARCHAR DEFAULT NULL,
+    p_specialty VARCHAR DEFAULT NULL,
+    p_state VARCHAR DEFAULT NULL,
+    p_quarter VARCHAR DEFAULT '2024-Q4'
+) RETURNS TABLE (
+    total_disputes BIGINT,
+    total_practices BIGINT,
+    provider_win_rate NUMERIC,
+    avg_provider_offer_pct NUMERIC,
+    avg_winning_offer_pct NUMERIC,
+    median_resolution_days NUMERIC,
+    avg_idre_compensation NUMERIC,
+    specialties_represented BIGINT,
+    states_represented BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        COUNT(*)::BIGINT as total_disputes,
+        COUNT(DISTINCT d.provider_facility_name)::BIGINT as total_practices,
+        ROUND(
+            CASE 
+                WHEN COUNT(*) = 0 THEN 0
+                ELSE (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*))
+            END, 
+            2
+        ) as provider_win_rate,
+        ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
+        ROUND(AVG(d.prevailing_party_offer_pct_qpa)::numeric, 2) as avg_winning_offer_pct,
+        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY d.length_determination_days)::numeric, 0) as median_resolution_days,
+        ROUND(AVG(d.idre_compensation)::numeric, 2) as avg_idre_compensation,
+        COUNT(DISTINCT d.practice_facility_specialty)::BIGINT as specialties_represented,
+        COUNT(DISTINCT d.location_of_service)::BIGINT as states_represented
+    FROM idr_disputes d
+    WHERE 
+        d.data_quarter = p_quarter
+        AND (p_email_domain IS NULL OR d.provider_email_domain = p_email_domain)
+        AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
+        AND (p_state IS NULL OR d.location_of_service = p_state);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function for provider group benchmarking (by facility group name)
+CREATE OR REPLACE FUNCTION get_provider_group_benchmark(
+    p_facility_group VARCHAR DEFAULT NULL,
+    p_specialty VARCHAR DEFAULT NULL,
+    p_state VARCHAR DEFAULT NULL,
+    p_quarter VARCHAR DEFAULT '2024-Q4'
+) RETURNS TABLE (
+    total_disputes BIGINT,
+    total_facilities BIGINT,
+    provider_win_rate NUMERIC,
+    avg_provider_offer_pct NUMERIC,
+    avg_winning_offer_pct NUMERIC,
+    median_resolution_days NUMERIC,
+    avg_idre_compensation NUMERIC,
+    specialties_represented BIGINT,
+    states_represented BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        COUNT(*)::BIGINT as total_disputes,
+        COUNT(DISTINCT d.provider_facility_name)::BIGINT as total_facilities,
+        ROUND(
+            CASE 
+                WHEN COUNT(*) = 0 THEN 0
+                ELSE (COUNT(*) FILTER (WHERE payment_determination_outcome = 'In Favor of Provider/Facility/AA Provider') * 100.0 / COUNT(*))
+            END, 
+            2
+        ) as provider_win_rate,
+        ROUND(AVG(d.provider_offer_pct_qpa)::numeric, 2) as avg_provider_offer_pct,
+        ROUND(AVG(d.prevailing_party_offer_pct_qpa)::numeric, 2) as avg_winning_offer_pct,
+        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY d.length_determination_days)::numeric, 0) as median_resolution_days,
+        ROUND(AVG(d.idre_compensation)::numeric, 2) as avg_idre_compensation,
+        COUNT(DISTINCT d.practice_facility_specialty)::BIGINT as specialties_represented,
+        COUNT(DISTINCT d.location_of_service)::BIGINT as states_represented
+    FROM idr_disputes d
+    WHERE 
+        d.data_quarter = p_quarter
+        AND (p_facility_group IS NULL OR d.provider_facility_group_name ILIKE '%' || p_facility_group || '%')
+        AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
+        AND (p_state IS NULL OR d.location_of_service = p_state);
 END;
 $$ LANGUAGE plpgsql;
 

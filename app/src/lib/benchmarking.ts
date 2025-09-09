@@ -10,9 +10,18 @@ export class BenchmarkingService {
    */
   static async getProviderBenchmark(filters: BenchmarkFilters): Promise<BenchmarkMetrics | null> {
     try {
-      // Build URL with practice name as query parameter if provided
+      // Build URL with appropriate parameters based on user type
       const params = new URLSearchParams()
-      if (filters.practice_name) {
+      
+      if (filters.user_type === 'law_firm' && filters.email_domain) {
+        params.append('email_domain', filters.email_domain)
+      }
+      
+      if (filters.user_type === 'provider_group' && filters.facility_group) {
+        params.append('facility_group', filters.facility_group)
+      }
+      
+      if (filters.user_type === 'individual_provider' && filters.practice_name) {
         params.append('practice_name', filters.practice_name)
       }
       
@@ -210,7 +219,11 @@ export class BenchmarkingService {
   /**
    * Generate insights based on benchmark comparison
    */
-  static generateInsights(providerMetrics: BenchmarkMetrics, peerMetrics: BenchmarkMetrics): Array<{
+  static generateInsights(
+    providerMetrics: BenchmarkMetrics, 
+    peerMetrics: BenchmarkMetrics, 
+    userType: 'individual_provider' | 'provider_group' | 'law_firm' = 'individual_provider'
+  ): Array<{
     type: 'success' | 'warning' | 'info'
     title: string
     message: string
@@ -221,26 +234,70 @@ export class BenchmarkingService {
       message: string
     }> = []
 
-    // Win rate insights
+    // Win rate insights (customized by user type)
     const winRateDiff = providerMetrics.provider_win_rate - peerMetrics.provider_win_rate
-    if (winRateDiff > 5) {
-      insights.push({
-        type: 'success',
-        title: '🎯 Excellent Win Rate Performance',
-        message: `Your win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${winRateDiff.toFixed(1)} percentage points above the peer average. This suggests strong case selection and preparation.`
-      })
-    } else if (winRateDiff < -5) {
-      insights.push({
-        type: 'warning',
-        title: '⚠️ Win Rate Below Peers',
-        message: `Your win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${Math.abs(winRateDiff).toFixed(1)} percentage points below peers. Consider reviewing case selection criteria and documentation quality.`
-      })
+    
+    if (userType === 'law_firm') {
+      if (winRateDiff > 5) {
+        insights.push({
+          type: 'success',
+          title: '🎯 Superior Client Representation',
+          message: `Your firm's win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${winRateDiff.toFixed(1)} percentage points above peer law firms. Your case strategy and preparation are delivering exceptional results for clients.`
+        })
+      } else if (winRateDiff < -5) {
+        insights.push({
+          type: 'warning',
+          title: '⚖️ Win Rate Below Peer Law Firms',
+          message: `Your firm's win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${Math.abs(winRateDiff).toFixed(1)} percentage points below peer law firms. Consider analyzing successful case strategies and strengthening documentation standards.`
+        })
+      } else {
+        insights.push({
+          type: 'info',
+          title: '📊 Competitive Law Firm Performance',
+          message: `Your firm's win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is competitive with peer law firms, indicating solid representation quality across your client portfolio.`
+        })
+      }
+    } else if (userType === 'provider_group') {
+      if (winRateDiff > 5) {
+        insights.push({
+          type: 'success',
+          title: '🏢 Outstanding Network Performance',
+          message: `Your provider group's win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${winRateDiff.toFixed(1)} percentage points above peer networks. Your standardized processes are driving superior IDR outcomes.`
+        })
+      } else if (winRateDiff < -5) {
+        insights.push({
+          type: 'warning',
+          title: '🔧 Network Performance Opportunity',
+          message: `Your provider group's win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${Math.abs(winRateDiff).toFixed(1)} percentage points below peer networks. Consider standardizing best practices across your ${providerMetrics.total_facilities} facilities.`
+        })
+      } else {
+        insights.push({
+          type: 'info',
+          title: '📈 Solid Network Performance',
+          message: `Your provider group's win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is in line with peer networks, showing consistent performance across your facility network.`
+        })
+      }
     } else {
-      insights.push({
-        type: 'info',
-        title: '📊 Win Rate In Line with Peers',
-        message: `Your win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is close to the peer average, indicating consistent performance.`
-      })
+      // Individual provider insights (existing logic)
+      if (winRateDiff > 5) {
+        insights.push({
+          type: 'success',
+          title: '🎯 Excellent Win Rate Performance',
+          message: `Your win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${winRateDiff.toFixed(1)} percentage points above the peer average. This suggests strong case selection and preparation.`
+        })
+      } else if (winRateDiff < -5) {
+        insights.push({
+          type: 'warning',
+          title: '⚠️ Win Rate Below Peers',
+          message: `Your win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is ${Math.abs(winRateDiff).toFixed(1)} percentage points below peers. Consider reviewing case selection criteria and documentation quality.`
+        })
+      } else {
+        insights.push({
+          type: 'info',
+          title: '📊 Win Rate In Line with Peers',
+          message: `Your win rate of ${providerMetrics.provider_win_rate.toFixed(1)}% is close to the peer average, indicating consistent performance.`
+        })
+      }
     }
 
     // Offer amount insights
@@ -261,13 +318,55 @@ export class BenchmarkingService {
       }
     }
 
-    // Volume insights
-    if (providerMetrics.total_disputes < 50) {
-      insights.push({
-        type: 'info',
-        title: '📈 Limited Sample Size',
-        message: `With ${providerMetrics.total_disputes} disputes, consider accumulating more data for robust benchmarking. Results may vary with larger samples.`
-      })
+    // Volume insights (customized by user type)
+    if (userType === 'law_firm') {
+      if (providerMetrics.total_disputes < 100) {
+        insights.push({
+          type: 'info',
+          title: '📈 Growing IDR Practice',
+          message: `With ${providerMetrics.total_disputes} disputes across ${providerMetrics.total_practices} practices, you're building a solid IDR practice. Consider marketing your expertise to attract more healthcare clients.`
+        })
+      } else {
+        insights.push({
+          type: 'success',
+          title: '⚖️ Established IDR Practice',
+          message: `With ${providerMetrics.total_disputes} disputes across ${providerMetrics.total_practices} practices in ${providerMetrics.specialties_represented} specialties, you have a robust IDR practice with diverse expertise.`
+        })
+      }
+
+      // Law firm specific insights
+      if (providerMetrics.specialties_represented && providerMetrics.specialties_represented >= 5) {
+        insights.push({
+          type: 'success',
+          title: '🎯 Multi-Specialty Expertise',
+          message: `Your firm represents ${providerMetrics.specialties_represented} different medical specialties, demonstrating broad healthcare IDR expertise that can attract diverse clients.`
+        })
+      }
+    } else if (userType === 'provider_group') {
+      if (providerMetrics.total_facilities && providerMetrics.total_facilities > 1) {
+        insights.push({
+          type: 'info',
+          title: '🏢 Multi-Facility Network Analysis',
+          message: `Your analysis covers ${providerMetrics.total_facilities} facilities across ${providerMetrics.states_represented} states. Consider facility-specific analysis to identify top performers within your network.`
+        })
+      }
+      
+      if (providerMetrics.specialties_represented && providerMetrics.specialties_represented > 3) {
+        insights.push({
+          type: 'success',
+          title: '🎯 Diverse Service Line Portfolio',
+          message: `Your network operates across ${providerMetrics.specialties_represented} specialties, providing diversified IDR exposure and risk distribution.`
+        })
+      }
+    } else {
+      // Individual provider volume insights (existing logic)
+      if (providerMetrics.total_disputes < 50) {
+        insights.push({
+          type: 'info',
+          title: '📈 Limited Sample Size',
+          message: `With ${providerMetrics.total_disputes} disputes, consider accumulating more data for robust benchmarking. Results may vary with larger samples.`
+        })
+      }
     }
 
     return insights

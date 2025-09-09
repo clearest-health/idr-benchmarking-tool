@@ -6,9 +6,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { filters, type = 'provider' } = body
     
-    // Get practice name from URL parameters
+    // Get additional parameters from URL
     const { searchParams } = new URL(request.url)
     const practiceNameParam = searchParams.get('practice_name')
+    const emailDomainParam = searchParams.get('email_domain')
+    const facilityGroupParam = searchParams.get('facility_group')
 
     if (!filters) {
       return NextResponse.json(
@@ -17,19 +19,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Determine the parameters based on benchmark type
-    let params = {
-      p_specialty: filters.specialty || null,
-      p_state: type === 'provider' ? (filters.state || null) : null,
-      p_practice_size: type === 'provider' ? (filters.practice_size || null) : null,
-      p_quarter: filters.quarter || '2024-Q4',
-      p_practice_name: type === 'provider' ? (practiceNameParam || null) : null
+    // Determine which stored procedure to call based on user type
+    let procedureName = 'get_provider_benchmark'
+    let params: any = {}
+
+    switch (filters.user_type) {
+      case 'law_firm':
+        procedureName = 'get_law_firm_benchmark'
+        params = {
+          p_email_domain: emailDomainParam || null,
+          p_specialty: filters.specialty || null,
+          p_state: filters.state || null,
+          p_quarter: filters.quarter || '2024-Q4'
+        }
+        break
+        
+      case 'provider_group':
+        procedureName = 'get_provider_group_benchmark'
+        params = {
+          p_facility_group: facilityGroupParam || null,
+          p_specialty: filters.specialty || null,
+          p_state: filters.state || null,
+          p_quarter: filters.quarter || '2024-Q4'
+        }
+        break
+        
+      default: // individual_provider
+        procedureName = 'get_provider_benchmark'
+        params = {
+          p_specialty: filters.specialty || null,
+          p_state: type === 'provider' ? (filters.state || null) : null,
+          p_practice_size: type === 'provider' ? (filters.practice_size || null) : null,
+          p_quarter: filters.quarter || '2024-Q4',
+          p_practice_name: type === 'provider' ? (practiceNameParam || null) : null
+        }
     }
 
-    console.log('🔍 Calling optimized stored procedure with params:', JSON.stringify(params, null, 2))
+    console.log('🔍 Calling stored procedure:', procedureName, 'with params:', JSON.stringify(params, null, 2))
 
-    // Call the optimized stored procedure
-    const { data, error } = await supabaseAdmin.rpc('get_provider_benchmark', params)
+    // Call the appropriate stored procedure
+    const { data, error } = await supabaseAdmin.rpc(procedureName, params)
 
     if (error) {
       console.error('Database error:', error)
