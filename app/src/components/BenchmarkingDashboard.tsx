@@ -445,7 +445,7 @@ export default function BenchmarkingDashboard() {
           <Group align="center">
             <div>
               <Title order={1} size="h1" c="gray.9">
-                Free IDR Benchmarking Tool
+                🎯 Get Your IDR Performance Analysis
               </Title>
               <Text size="sm" c="gray.6" mt={4}>
               Compare your IDR performance against peer providers
@@ -460,15 +460,6 @@ export default function BenchmarkingDashboard() {
         <Container size="xl" py="lg">
           {/* Horizontal Form Layout */}
           <Stack gap="xl">
-            <Box ta="center">
-              <Title order={2} size="xl" c="gray.8" mb="xs">
-                🎯 Get Your IDR Performance Analysis
-              </Title>
-              <Text size="md" c="gray.6">
-                Compare your performance against industry peers in 3 simple steps
-              </Text>
-            </Box>
-
             <Paper shadow="lg" p="xl" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', border: '2px solid #e2e8f0' }}>
               <Grid gutter="xl" align="end">
                 {/* Step 1: User Type */}
