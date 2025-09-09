@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { BenchmarkingService } from '@/lib/benchmarking'
 import { BenchmarkMetrics, BenchmarkFilters } from '@/lib/supabase'
 import { usePostHog } from 'posthog-js/react'
@@ -77,6 +78,7 @@ interface Insight {
 
 export default function BenchmarkingDashboard() {
   const posthog = usePostHog()
+  const searchParams = useSearchParams()
   
   const [filters, setFilters] = useState<BenchmarkFilters>({
     quarter: '2024-Q4',
@@ -121,16 +123,42 @@ export default function BenchmarkingDashboard() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
+      const urlUserType = urlParams.get('user_type')
       const urlPracticeName = urlParams.get('practice_name')
+      const urlEmailDomain = urlParams.get('email_domain')
+      const urlFacilityGroup = urlParams.get('facility_group')
       const urlSpecialty = urlParams.get('specialty')
       const urlState = urlParams.get('state')
       const urlPracticeSize = urlParams.get('practice_size')
       const urlQuarter = urlParams.get('quarter')
 
+      // Set user type if provided
+      if (urlUserType && ['individual_provider', 'law_firm', 'provider_group'].includes(urlUserType)) {
+        setFilters(prev => ({
+          ...prev,
+          user_type: urlUserType as 'individual_provider' | 'provider_group' | 'law_firm'
+        }))
+      }
+
+      // Handle practice name for individual providers
       if (urlPracticeName) {
         setPracticeName(urlPracticeName)
         // Trigger search to get practice data and auto-populate fields
         setTimeout(() => searchPracticeNames(urlPracticeName), 100)
+      }
+
+      // Handle email domain for law firms
+      if (urlEmailDomain) {
+        setEmailDomain(urlEmailDomain)
+        // Trigger search for email domain suggestions
+        setTimeout(() => searchEmailDomains(urlEmailDomain), 100)
+      }
+
+      // Handle facility group for provider groups
+      if (urlFacilityGroup) {
+        setFacilityGroup(urlFacilityGroup)
+        // Trigger search for facility group suggestions
+        setTimeout(() => searchFacilityGroups(urlFacilityGroup), 100)
       }
       
       setFilters(prev => ({
