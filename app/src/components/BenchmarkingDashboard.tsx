@@ -526,7 +526,7 @@ export default function BenchmarkingDashboard() {
             <Paper shadow="lg" p="xl" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', border: '2px solid #e2e8f0' }}>
               <Grid gutter="xl" align="end">
                 {/* Step 1: User Type */}
-                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                   <Box>
                     <Group mb="sm">
                       <Box 
@@ -693,7 +693,7 @@ export default function BenchmarkingDashboard() {
                 </Grid.Col>
 
                 {/* Step 3: Specialty Filter */}
-                <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+                <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
                   <Box>
                     <Group mb="sm">
                       <Box 
@@ -740,59 +740,60 @@ export default function BenchmarkingDashboard() {
                   </Box>
                 </Grid.Col>
 
-                {/* Step 4: Run Analysis Button */}
-                <Grid.Col span={{ base: 12, md: 2 }}>
-                  <Button
-                    onClick={runBenchmarkAnalysis}
-                    disabled={loading || (
-                      filters.user_type === 'individual_provider' && !filters.specialty
-                    ) || (
-                      filters.user_type === 'law_firm' && !emailDomain.trim()
-                    ) || (
-                      filters.user_type === 'provider_group' && !facilityGroup.trim()
-                    )}
-                    loading={loading}
-                    size="xl"
-                    fullWidth
-                    h={80}
-                    className={!providerMetrics && !loading && !(
-                      (filters.user_type === 'individual_provider' && !filters.specialty) ||
-                      (filters.user_type === 'law_firm' && !emailDomain.trim()) ||
-                      (filters.user_type === 'provider_group' && !facilityGroup.trim())
-                    ) ? 'breathe-animation' : ''}
-                    styles={{
-                      root: {
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        fontSize: '18px',
-                        fontWeight: 'bold',
-                        borderRadius: '12px',
-                        border: '3px solid #065f46',
-                        boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
-                        '&:hover': {
-                          transform: 'scale(1.08)',
-                          boxShadow: '0 15px 40px rgba(16, 185, 129, 0.8)'
-                        },
-                        '&:disabled': {
-                          background: '#9ca3af',
-                          transform: 'none',
-                          boxShadow: 'none'
-                        }
-                      }
-                    }}
-                  >
-                    {loading ? (
-                      <Stack gap="xs" align="center">
-                        <Loader size="sm" color="white" />
-                        <Text size="sm" c="white">Analyzing...</Text>
-                      </Stack>
-                    ) : (
-                      <Stack gap="xs" align="center">
-                        <Text size="sm" fw="bold" c="white">RUN ANALYSIS</Text>
-                      </Stack>
-                    )}
-                  </Button>
-                </Grid.Col>
               </Grid>
+
+              {/* Run Analysis Button - Separate Row */}
+              <Group justify="center" mt="lg">
+                <Button
+                  onClick={runBenchmarkAnalysis}
+                  disabled={loading || (
+                    filters.user_type === 'individual_provider' && !filters.specialty
+                  ) || (
+                    filters.user_type === 'law_firm' && !emailDomain.trim()
+                  ) || (
+                    filters.user_type === 'provider_group' && !facilityGroup.trim()
+                  )}
+                  loading={loading}
+                  size="xl"
+                  w={{ base: '100%', sm: 300 }}
+                  h={80}
+                  className={!providerMetrics && !loading && !(
+                    (filters.user_type === 'individual_provider' && !filters.specialty) ||
+                    (filters.user_type === 'law_firm' && !emailDomain.trim()) ||
+                    (filters.user_type === 'provider_group' && !facilityGroup.trim())
+                  ) ? 'breathe-animation' : ''}
+                  styles={{
+                    root: {
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      borderRadius: '12px',
+                      border: '3px solid #065f46',
+                      boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
+                      '&:hover': {
+                        transform: 'scale(1.08)',
+                        boxShadow: '0 15px 40px rgba(16, 185, 129, 0.8)'
+                      },
+                      '&:disabled': {
+                        background: '#9ca3af',
+                        transform: 'none',
+                        boxShadow: 'none'
+                      }
+                    }
+                  }}
+                >
+                  {loading ? (
+                    <Stack gap="xs" align="center">
+                      <Loader size="sm" color="white" />
+                      <Text size="sm" c="white">Analyzing...</Text>
+                    </Stack>
+                  ) : (
+                    <Stack gap="xs" align="center">
+                      <Text size="md" fw="bold" c="white">RUN ANALYSIS</Text>
+                    </Stack>
+                  )}
+                </Button>
+              </Group>
             </Paper>
               
               {filtersError && (
