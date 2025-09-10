@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
           p_email_domain: emailDomainParam || null,
           p_specialty: filters.specialty || null,
           p_state: filters.state || null,
-          p_quarter: filters.quarter || '2024-Q4'
+          p_quarter: filters.quarter || '2024-Q4'  // Default to Q4 if not specified
         }
         break
         
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
           p_facility_group: facilityGroupParam || null,
           p_specialty: filters.specialty || null,
           p_state: filters.state || null,
-          p_quarter: filters.quarter || '2024-Q4'
+          p_quarter: filters.quarter || '2024-Q4'  // Default to Q4 if not specified
         }
         break
         
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
           p_specialty: filters.specialty || null,
           p_state: type === 'provider' ? (filters.state || null) : null,
           p_practice_size: type === 'provider' ? (filters.practice_size || null) : null,
-          p_quarter: filters.quarter || '2024-Q4',
+          p_quarter: filters.quarter || '2024-Q4',  // Default to Q4 if not specified
           p_practice_name: type === 'provider' ? (practiceNameParam || null) : null
         }
     }

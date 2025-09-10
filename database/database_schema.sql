@@ -321,7 +321,7 @@ BEGIN
         ROUND(AVG(d.idre_compensation)::numeric, 2) as avg_idre_compensation
     FROM idr_disputes d
     WHERE 
-        d.data_quarter = p_quarter
+        (p_quarter IS NULL OR d.data_quarter = p_quarter)
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state)
         AND (p_practice_size IS NULL OR d.practice_facility_size = p_practice_size);
@@ -365,7 +365,7 @@ BEGIN
         COUNT(DISTINCT d.location_of_service)::BIGINT as states_represented
     FROM idr_disputes d
     WHERE 
-        d.data_quarter = p_quarter
+        (p_quarter IS NULL OR d.data_quarter = p_quarter)
         AND (p_email_domain IS NULL OR d.provider_email_domain = p_email_domain)
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state);
@@ -409,7 +409,7 @@ BEGIN
         COUNT(DISTINCT d.location_of_service)::BIGINT as states_represented
     FROM idr_disputes d
     WHERE 
-        d.data_quarter = p_quarter
+        (p_quarter IS NULL OR d.data_quarter = p_quarter)
         AND (p_facility_group IS NULL OR d.provider_facility_group_name ILIKE '%' || p_facility_group || '%')
         AND (p_specialty IS NULL OR d.practice_facility_specialty = p_specialty)
         AND (p_state IS NULL OR d.location_of_service = p_state);
