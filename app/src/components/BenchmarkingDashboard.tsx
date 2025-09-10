@@ -83,6 +83,37 @@ interface Insight {
 export default function BenchmarkingDashboard() {
   const posthog = usePostHog()
   
+  // Add CSS for button animation
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes breathe {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        50% {
+          transform: scale(1.08);
+          box-shadow: 0 15px 40px rgba(16, 185, 129, 0.8);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+      }
+      .breathe-animation {
+        animation: breathe 1.5s ease-in-out infinite;
+      }
+      .breathe-animation:hover {
+        animation: none !important;
+        transform: scale(1.08) !important;
+        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.8) !important;
+      }
+    `
+    document.head.appendChild(style)
+    return () => document.head.removeChild(style)
+  }, [])
+  
   const [filters, setFilters] = useState<BenchmarkFilters>({
     quarter: '2024-Q4',
     user_type: 'individual_provider'
@@ -724,6 +755,11 @@ export default function BenchmarkingDashboard() {
                     size="xl"
                     fullWidth
                     h={80}
+                    className={!providerMetrics && !loading && !(
+                      (filters.user_type === 'individual_provider' && !filters.specialty) ||
+                      (filters.user_type === 'law_firm' && !emailDomain.trim()) ||
+                      (filters.user_type === 'provider_group' && !facilityGroup.trim())
+                    ) ? 'breathe-animation' : ''}
                     styles={{
                       root: {
                         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -733,8 +769,8 @@ export default function BenchmarkingDashboard() {
                         border: '3px solid #065f46',
                         boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
                         '&:hover': {
-                          transform: 'translateY(-3px)',
-                          boxShadow: '0 12px 30px rgba(16, 185, 129, 0.5)'
+                          transform: 'scale(1.08)',
+                          boxShadow: '0 15px 40px rgba(16, 185, 129, 0.8)'
                         },
                         '&:disabled': {
                           background: '#9ca3af',
@@ -751,8 +787,7 @@ export default function BenchmarkingDashboard() {
                       </Stack>
                     ) : (
                       <Stack gap="xs" align="center">
-                        <Text size="xl">📊</Text>
-                        <Text size="md" fw="bold" c="white">ANALYZE</Text>
+                        <Text size="sm" fw="bold" c="white">RUN ANALYSIS</Text>
                       </Stack>
                     )}
                   </Button>
