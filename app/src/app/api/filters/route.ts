@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const specialty = searchParams.get('specialty')
     const state = searchParams.get('state')
-    const quarter = searchParams.get('quarter') || '2024-Q4' // Default to Q4 if not specified
+    const quarter = searchParams.get('quarter') // No default - allow all quarters
 
     // Check if Supabase is properly configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -48,10 +48,8 @@ export async function GET(request: Request) {
             return res
           }
           
-          // Filter by quarter if specified, default to Q4
-          const quarterData = res.data?.filter(item => 
-            !quarter || item.data_quarter === quarter
-          ) || []
+          // Use all data across all quarters for comprehensive analysis
+          const quarterData = res.data || []
           
           // Count and sort alphabetically
           const counts = quarterData.reduce((acc, item) => {

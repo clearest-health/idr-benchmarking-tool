@@ -117,7 +117,7 @@ export default function BenchmarkingDashboard() {
   }, [])
   
   const [filters, setFilters] = useState<BenchmarkFilters>({
-    quarter: '2024-Q4',
+    quarter: undefined, // Run across all quarters for comprehensive analysis
     user_type: 'individual_provider'
   })
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
@@ -397,13 +397,15 @@ export default function BenchmarkingDashboard() {
       return
     }
 
-    // Track analysis start
+    // Track analysis start with performance timing
+    const startTime = performance.now()
     posthog?.capture('analysis_started', {
       specialty: filters.specialty,
       state: filters.state,
       practice_size: filters.practice_size,
       practice_name: practiceName.trim() || null,
-      quarter: filters.quarter
+      quarter: 'ALL_QUARTERS',
+      performance_test: true
     })
 
     setLoading(true)
@@ -444,7 +446,13 @@ export default function BenchmarkingDashboard() {
       )
       setInsights(generatedInsights)
 
-      // Track successful analysis
+      // Track successful analysis with performance metrics
+      const endTime = performance.now()
+      const queryTime = Math.round(endTime - startTime)
+      
+      console.log(`🚀 Query completed in ${queryTime}ms across ALL QUARTERS`)
+      console.log(`📊 Results: ${providerData.total_disputes} disputes across Q1-Q4 2024`)
+      
       posthog?.capture('analysis_completed', {
         specialty: filters.specialty,
         state: filters.state,
@@ -452,7 +460,10 @@ export default function BenchmarkingDashboard() {
         practice_name: practiceName.trim() || null,
         total_disputes: providerData.total_disputes,
         win_rate: providerData.provider_win_rate,
-        insights_generated: generatedInsights.length
+        insights_generated: generatedInsights.length,
+        query_time_ms: queryTime,
+        quarter_analyzed: 'ALL_QUARTERS',
+        total_quarters: 4
       })
 
     } catch (error) {
