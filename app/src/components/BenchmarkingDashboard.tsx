@@ -430,8 +430,8 @@ export default function BenchmarkingDashboard() {
       ])
 
       // Extract provider data and analytics from the provider result
-      const providerData = (providerResult as Record<string, unknown>)?.data || providerResult
-      const analytics = (providerResult as Record<string, unknown>)?.analytics || null
+      const providerData = (providerResult as unknown as Record<string, unknown>)?.data || providerResult
+      const analytics = (providerResult as unknown as Record<string, unknown>)?.analytics || null
 
       if (!providerData || !peerData) {
         posthog?.capture('analysis_failed', { reason: 'no_data_found' })
