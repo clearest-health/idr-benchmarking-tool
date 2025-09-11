@@ -1171,14 +1171,40 @@ export default function BenchmarkingDashboard() {
                             Top Service Codes by Win Rate
                           </Title>
                           <Text size="xs" c="gray.5" ta="center" mb="sm">
-                            (Ranked by Win Rate ≥50 cases)
+                            (Ranked by Win Rate - Min {(() => {
+                              const codes50Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 50);
+                              const codes20Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 20);
+                              const codes10Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 10);
+                              
+                              if (codes50Plus.length >= 10) return '50';
+                              if (codes20Plus.length >= 10) return '20';
+                              if (codes10Plus.length >= 10) return '10';
+                              return '3';
+                            })()} cases)
                           </Text>
                           <Box h={300}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={analyticsData.service_code_analysis
-                                .filter(code => code.total_disputes >= 50)
-                                .sort((a, b) => b.win_rate - a.win_rate)
-                                .slice(0, 15)}>
+                              <BarChart data={(() => {
+                                const codes50Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 50);
+                                const codes20Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 20);
+                                const codes10Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 10);
+                                const codes3Plus = analyticsData.service_code_analysis.filter(code => code.total_disputes >= 3);
+                                
+                                let filteredCodes;
+                                if (codes50Plus.length >= 10) {
+                                  filteredCodes = codes50Plus;
+                                } else if (codes20Plus.length >= 10) {
+                                  filteredCodes = codes20Plus;
+                                } else if (codes10Plus.length >= 10) {
+                                  filteredCodes = codes10Plus;
+                                } else {
+                                  filteredCodes = codes3Plus;
+                                }
+                                
+                                return filteredCodes
+                                  .sort((a, b) => b.win_rate - a.win_rate)
+                                  .slice(0, 15);
+                              })()}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="service_code" fontSize={12} />
                                 <YAxis domain={[0, 100]} fontSize={12} />
