@@ -439,20 +439,20 @@ export default function BenchmarkingDashboard() {
         return
       }
 
-      if (providerData.total_disputes === 0) {
+      if ((providerData as any).total_disputes === 0) {
         posthog?.capture('analysis_failed', { reason: 'zero_disputes' })
         alert('No disputes found matching your specific criteria. Please broaden your filters.')
         return
       }
 
-      setProviderMetrics(providerData)
-      setPeerMetrics(peerData)
+      setProviderMetrics(providerData as any)
+      setPeerMetrics(peerData as any)
       setAnalyticsData(analytics)
       
       // Generate insights based on user type
       const generatedInsights = BenchmarkingService.generateInsights(
-        providerData, 
-        peerData, 
+        providerData as any, 
+        peerData as any,
         filters.user_type || 'individual_provider'
       )
       setInsights(generatedInsights)
