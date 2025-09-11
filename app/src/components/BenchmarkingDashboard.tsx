@@ -62,6 +62,46 @@ interface FilterOptions {
   }
 }
 
+interface ServiceCodeAnalysis {
+  service_code: string
+  type_of_service_code: string
+  total_disputes: number
+  wins: number
+  losses: number
+  win_rate: number
+  avg_provider_offer_pct: number | null
+  avg_winning_offer_pct: number | null
+}
+
+interface ServiceCodeSummary {
+  total_cases_with_service_codes: number
+  total_wins_with_service_codes: number
+  cases_missing_service_codes: number
+  total_service_codes: number
+  displayed_service_codes: number
+  total_cases_in_analytics: number
+  quarter_filter_applied: string
+  service_code_types: Record<string, { count: number; cases: number; wins: number }>
+  note: string
+}
+
+interface QuarterlyAnalysis {
+  data_quarter: string
+  total_disputes: number
+  wins: number
+  losses: number
+  win_rate: number
+  avg_provider_offer_pct: number | null
+  avg_winning_offer_pct: number | null
+}
+
+interface AnalyticsData {
+  service_code_analysis?: ServiceCodeAnalysis[]
+  service_code_summary?: ServiceCodeSummary
+  quarterly_analysis?: QuarterlyAnalysis[]
+  message?: string
+}
+
 interface PracticeSearchResult {
   name: string
   specialty: string
@@ -144,7 +184,7 @@ export default function BenchmarkingDashboard() {
   const [facilityGroupSuggestions, setFacilityGroupSuggestions] = useState<string[]>([])
   const [facilityGroupLoading, setFacilityGroupLoading] = useState(false)
   const [showPeerExplanation, setShowPeerExplanation] = useState(false)
-  const [analyticsData, setAnalyticsData] = useState<Record<string, unknown> | null>(null)
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [practiceData, setPracticeData] = useState<Array<{
     name: string
     specialty: string
@@ -432,7 +472,7 @@ export default function BenchmarkingDashboard() {
       // Extract provider data and analytics from the provider result
       // The API can return either BenchmarkMetrics directly or an object with {data, analytics}
       const providerData: BenchmarkMetrics = (providerResult as any)?.data || providerResult
-      const analytics: Record<string, unknown> | null = (providerResult as any)?.analytics || null
+      const analytics: AnalyticsData | null = (providerResult as any)?.analytics || null
 
       if (!providerData || !peerData) {
         posthog?.capture('analysis_failed', { reason: 'no_data_found' })
@@ -1196,7 +1236,7 @@ export default function BenchmarkingDashboard() {
                                 <br />
                                 <Text size="xs" c="gray.6">
                                   <strong>By Type:</strong> {' '}
-                                  {Object.entries(analyticsData.service_code_summary.service_code_types).map(([type, stats]: [string, { count: number; cases: number; wins: number }]) => (
+                                  {Object.entries(analyticsData.service_code_summary.service_code_types).map(([type, stats]) => (
                                     `${type}: ${stats.cases.toLocaleString()} cases (${stats.count} codes)`
                                   )).join(' • ')}
                                 </Text>
@@ -1228,15 +1268,7 @@ export default function BenchmarkingDashboard() {
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                          {analyticsData.service_code_analysis.slice(0, 15).map((serviceCode: {
-                            service_code: string;
-                            type_of_service_code: string;
-                            total_disputes: number;
-                            wins: number;
-                            losses: number;
-                            win_rate: number;
-                            avg_provider_offer_pct: number | null;
-                          }, index: number) => (
+                          {analyticsData.service_code_analysis.slice(0, 15).map((serviceCode, index: number) => (
                             <Table.Tr key={`${serviceCode.service_code}-${serviceCode.type_of_service_code}-${index}`}>
                               <Table.Td fw={500}>{serviceCode.service_code}</Table.Td>
                               <Table.Td ta="center">
