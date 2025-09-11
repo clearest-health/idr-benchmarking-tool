@@ -430,8 +430,9 @@ export default function BenchmarkingDashboard() {
       ])
 
       // Extract provider data and analytics from the provider result
-      const providerData = (providerResult as unknown as Record<string, unknown>)?.data || providerResult
-      const analytics = (providerResult as unknown as Record<string, unknown>)?.analytics || null
+      // The API can return either BenchmarkMetrics directly or an object with {data, analytics}
+      const providerData: BenchmarkMetrics = (providerResult as any)?.data || providerResult
+      const analytics: Record<string, unknown> | null = (providerResult as any)?.analytics || null
 
       if (!providerData || !peerData) {
         posthog?.capture('analysis_failed', { reason: 'no_data_found' })
@@ -439,20 +440,20 @@ export default function BenchmarkingDashboard() {
         return
       }
 
-      if ((providerData as any).total_disputes === 0) {
+      if (providerData.total_disputes === 0) {
         posthog?.capture('analysis_failed', { reason: 'zero_disputes' })
         alert('No disputes found matching your specific criteria. Please broaden your filters.')
         return
       }
 
-      setProviderMetrics(providerData as any)
-      setPeerMetrics(peerData as any)
+      setProviderMetrics(providerData)
+      setPeerMetrics(peerData)
       setAnalyticsData(analytics)
       
       // Generate insights based on user type
       const generatedInsights = BenchmarkingService.generateInsights(
-        providerData as any, 
-        peerData as any,
+        providerData, 
+        peerData,
         filters.user_type || 'individual_provider'
       )
       setInsights(generatedInsights)
