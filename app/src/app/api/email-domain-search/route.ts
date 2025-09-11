@@ -28,7 +28,7 @@ export async function GET(request: Request) {
             .select('provider_email_domain')
             .not('provider_email_domain', 'is', null)
             .ilike('provider_email_domain', `%${query}%`)
-            .limit(1000)
+            .limit(10000)
 
           if (basicQuery.error) {
             return { data: [], error: basicQuery.error }

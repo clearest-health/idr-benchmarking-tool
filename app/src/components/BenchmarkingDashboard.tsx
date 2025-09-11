@@ -21,7 +21,8 @@ import {
   Alert,
   Box,
   Autocomplete,
-  Table
+  Table,
+  Collapse
 } from '@mantine/core'
 import { 
   IconChartBar, 
@@ -39,7 +40,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell
+  Cell,
+  LineChart,
+  Line
 } from 'recharts'
 
 interface FilterOptions {
@@ -140,6 +143,9 @@ export default function BenchmarkingDashboard() {
   const [emailDomainLoading, setEmailDomainLoading] = useState(false)
   const [facilityGroupSuggestions, setFacilityGroupSuggestions] = useState<string[]>([])
   const [facilityGroupLoading, setFacilityGroupLoading] = useState(false)
+  const [showPeerExplanation, setShowPeerExplanation] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState<any>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
   const [practiceData, setPracticeData] = useState<Array<{
     name: string
     specialty: string
@@ -418,10 +424,14 @@ export default function BenchmarkingDashboard() {
         facility_group: filters.user_type === 'provider_group' ? (facilityGroup.trim() || undefined) : undefined
       }
 
-      const [providerData, peerData] = await Promise.all([
+      const [providerResult, peerData] = await Promise.all([
         BenchmarkingService.getProviderBenchmark(providerFilters),
         BenchmarkingService.getPeerBenchmark(filters) // Keep peer comparison broad (no practice name filter)
       ])
+
+      // Extract provider data and analytics from the provider result
+      const providerData = (providerResult as any)?.data || providerResult
+      const analytics = (providerResult as any)?.analytics || null
 
       if (!providerData || !peerData) {
         posthog?.capture('analysis_failed', { reason: 'no_data_found' })
@@ -437,6 +447,7 @@ export default function BenchmarkingDashboard() {
 
       setProviderMetrics(providerData)
       setPeerMetrics(peerData)
+      setAnalyticsData(analytics)
       
       // Generate insights based on user type
       const generatedInsights = BenchmarkingService.generateInsights(
@@ -1076,7 +1087,175 @@ export default function BenchmarkingDashboard() {
                         </Box>
                       </Box>
                     </Grid.Col>
+
+                    {/* Service Code Win Rate Chart */}
+                    {analyticsData?.service_code_analysis && analyticsData.service_code_analysis.length > 0 && (
+                      <Grid.Col span={{ base: 12, md: 6 }}>
+                        <Box>
+                          <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
+                            Top Service Codes by Win Rate
+                          </Title>
+                          <Text size="xs" c="gray.5" ta="center" mb="sm">
+                            (CPT, HCPCS, DRG, N/R codes)
+                          </Text>
+                          <Box h={300}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={analyticsData.service_code_analysis.slice(0, 10)}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="service_code" fontSize={12} />
+                                <YAxis domain={[0, 100]} fontSize={12} />
+                                <Tooltip 
+                                  formatter={(value, name) => [
+                                    name === 'win_rate' ? `${value}%` : value,
+                                    name === 'win_rate' ? 'Win Rate' : name
+                                  ]}
+                                  labelFormatter={(label, payload) => {
+                                    const item = payload?.[0]?.payload
+                                    return item ? `${item.type_of_service_code}: ${label}` : `Code: ${label}`
+                                  }}
+                                />
+                                <Bar dataKey="win_rate" fill="#4c6ef5" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Box>
+                      </Grid.Col>
+                    )}
+
+                    {/* Quarterly Trend Chart */}
+                    {analyticsData?.quarterly_analysis && analyticsData.quarterly_analysis.length > 0 && (
+                      <Grid.Col span={{ base: 12, md: 6 }}>
+                        <Box>
+                          <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
+                            Quarterly Win Rate Trend
+                          </Title>
+                          <Box h={300}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={analyticsData.quarterly_analysis}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="data_quarter" fontSize={12} />
+                                <YAxis domain={[0, 100]} fontSize={12} />
+                                <Tooltip 
+                                  formatter={(value, name) => [
+                                    name === 'win_rate' ? `${value}%` : value,
+                                    name === 'win_rate' ? 'Win Rate' : name === 'total_disputes' ? 'Total Cases' : name
+                                  ]}
+                                />
+                                <Line 
+                                  type="monotone" 
+                                  dataKey="win_rate" 
+                                  stroke="#4c6ef5" 
+                                  strokeWidth={3}
+                                  dot={{ fill: '#4c6ef5', strokeWidth: 2, r: 6 }}
+                                />
+                                <Line 
+                                  type="monotone" 
+                                  dataKey="total_disputes" 
+                                  stroke="#51cf66" 
+                                  strokeWidth={2}
+                                  dot={{ fill: '#51cf66', strokeWidth: 2, r: 4 }}
+                                  yAxisId="right"
+                                />
+                                <YAxis yAxisId="right" orientation="right" fontSize={12} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Box>
+                      </Grid.Col>
+                    )}
                   </Grid>
+
+                  {/* Service Code Details Table */}
+                  {analyticsData?.service_code_analysis && analyticsData.service_code_analysis.length > 0 && (
+                    <Box mt="xl">
+                      <Title order={4} size="md" c="gray.7" mb="md">
+                        📋 Service Code Performance Details (CPT, HCPCS, DRG, N/R)
+                      </Title>
+                      
+                      {analyticsData.service_code_summary && (
+                        <Alert 
+                          variant="light" 
+                          color={analyticsData.service_code_summary.cases_missing_service_codes > 0 ? "orange" : "blue"} 
+                          mb="md" 
+                          icon={<IconAlertCircle size={16} />}
+                        >
+                          <Text size="sm">
+                            <strong>Service Code Analysis:</strong> {analyticsData.service_code_summary.total_cases_with_service_codes.toLocaleString()} cases 
+                            with service codes out of {analyticsData.service_code_summary.total_cases_in_analytics?.toLocaleString() || providerMetrics.total_disputes.toLocaleString()} total cases.
+                            {analyticsData.service_code_summary.quarter_filter_applied && (
+                              <>
+                                <br />
+                                <Text size="xs" c="gray.6">
+                                  Quarter filter: {analyticsData.service_code_summary.quarter_filter_applied}
+                                </Text>
+                              </>
+                            )}
+                            {analyticsData.service_code_summary.service_code_types && (
+                              <>
+                                <br />
+                                <Text size="xs" c="gray.6">
+                                  <strong>By Type:</strong> {' '}
+                                  {Object.entries(analyticsData.service_code_summary.service_code_types).map(([type, stats]: [string, any]) => (
+                                    `${type}: ${stats.cases.toLocaleString()} cases (${stats.count} codes)`
+                                  )).join(' • ')}
+                                </Text>
+                              </>
+                            )}
+                            {analyticsData.service_code_summary.cases_missing_service_codes > 0 && (
+                              <>
+                                <br />
+                                <strong style={{ color: 'var(--mantine-color-orange-7)' }}>
+                                  ⚠️ DATA QUALITY ISSUE: {analyticsData.service_code_summary.cases_missing_service_codes.toLocaleString()} cases are missing service codes.
+                                </strong>
+                                <br />
+                                <Text size="xs" c="gray.6">
+                                  All IDR disputes should have service codes. Missing codes may indicate data import issues.
+                                </Text>
+                              </>
+                            )}
+                          </Text>
+                        </Alert>
+                      )}
+                      <Table striped highlightOnHover withTableBorder>
+                        <Table.Thead>
+                          <Table.Tr>
+                            <Table.Th>Service Code</Table.Th>
+                            <Table.Th ta="center">Type</Table.Th>
+                            <Table.Th ta="center">Cases</Table.Th>
+                            <Table.Th ta="center">Win Rate</Table.Th>
+                            <Table.Th ta="center">Avg Offer</Table.Th>
+                          </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                          {analyticsData.service_code_analysis.slice(0, 15).map((serviceCode: any, index: number) => (
+                            <Table.Tr key={`${serviceCode.service_code}-${serviceCode.type_of_service_code}-${index}`}>
+                              <Table.Td fw={500}>{serviceCode.service_code}</Table.Td>
+                              <Table.Td ta="center">
+                                <Badge 
+                                  size="xs" 
+                                  color={
+                                    serviceCode.type_of_service_code === 'CPT' ? 'blue' :
+                                    serviceCode.type_of_service_code === 'HCPCS' ? 'green' :
+                                    serviceCode.type_of_service_code === 'DRG' ? 'orange' :
+                                    'gray'
+                                  }
+                                >
+                                  {serviceCode.type_of_service_code}
+                                </Badge>
+                              </Table.Td>
+                              <Table.Td ta="center" fw={500}>{serviceCode.total_disputes}</Table.Td>
+                              <Table.Td ta="center" fw={500} c={serviceCode.win_rate >= 50 ? 'green.7' : 'red.7'}>
+                                {serviceCode.win_rate}%
+                              </Table.Td>
+                              <Table.Td ta="center">
+                                {serviceCode.avg_provider_offer_pct ? `${serviceCode.avg_provider_offer_pct}%` : 'N/A'}
+                              </Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    </Box>
+                  )}
                 </Paper>
 
                 {/* Insights */}
@@ -1158,9 +1337,9 @@ export default function BenchmarkingDashboard() {
                         <Text size="sm" c="gray.6" component="ul" style={{ listStyleType: 'none', padding: 0 }}>
                           {filters.user_type === 'law_firm' ? (
                             <>
-                              <li>• All law firms in IDR market</li>
-                              <li>• {filters.specialty ? `Focus: ${filters.specialty}` : 'All specialties'}</li>
-                              <li>• All geographic locations</li>
+                              <li>• Entire IDR market (all specialties, all locations)</li>
+                              <li>• Includes: Other law firms, self-represented providers, provider groups</li>
+                              <li>• All geographic locations, practice sizes, and medical specialties</li>
                               <li>• Total peer disputes: {peerMetrics?.total_disputes.toLocaleString() || '0'}</li>
                             </>
                           ) : filters.user_type === 'provider_group' ? (
@@ -1182,6 +1361,134 @@ export default function BenchmarkingDashboard() {
                       </Box>
                     </Grid.Col>
                   </Grid>
+                </Paper>
+
+                {/* Peer Average Calculation Explanation - All User Types */}
+                <Paper shadow="sm" p="lg" style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <Collapse in={showPeerExplanation}>
+                    <Title order={4} size="md" c="blue.8" mb="md">
+                      🔍 How Your Peer Average is Calculated
+                    </Title>
+                    
+                    {filters.user_type === 'law_firm' ? (
+                      <>
+                        <Text size="sm" c="gray.7" mb="md">
+                          Your peer comparison represents the <strong>entire IDR market</strong> across all specialties, 
+                          not just other law firms. This gives you insight into the competitive advantage of legal representation.
+                        </Text>
+
+                        <Grid>
+                          <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Box p="md" style={{ background: 'white', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                              <Title order={5} size="sm" c="blue.7" mb="xs">What's Included in Peer Average:</Title>
+                              <Text size="sm" c="gray.6" component="ul" style={{ margin: 0 }}>
+                                <li>✅ <strong>Other law firms</strong> representing providers across all specialties</li>
+                                <li>✅ <strong>Self-represented providers</strong> (no legal counsel) across all specialties</li>
+                                <li>✅ <strong>Provider groups/health systems</strong> with internal legal teams</li>
+                                <li>✅ <strong>All medical specialties</strong> (Emergency Medicine, Radiology, etc.)</li>
+                                <li>✅ <strong>All geographic locations and practice sizes</strong></li>
+                                <li>✅ <strong>All quarters in 2024</strong> for comprehensive data</li>
+                              </Text>
+                            </Box>
+                          </Grid.Col>
+                          
+                          <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Box p="md" style={{ background: 'white', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                              <Title order={5} size="sm" c="blue.7" mb="xs">Why This Comparison Matters:</Title>
+                              <Text size="sm" c="gray.6" component="ul" style={{ margin: 0 }}>
+                                <li>📊 <strong>Market-wide benchmark:</strong> See how legal representation performs vs. the entire market</li>
+                                <li>🎯 <strong>Competitive advantage:</strong> Measure the value you provide over self-representation</li>
+                                <li>📈 <strong>Industry positioning:</strong> Understand where you stand in the broader IDR landscape</li>
+                                <li>🔍 <strong>Statistical significance:</strong> Larger sample size ({peerMetrics?.total_disputes.toLocaleString() || '0'} disputes) for reliable comparisons</li>
+                              </Text>
+                            </Box>
+                          </Grid.Col>
+                        </Grid>
+                      </>
+                    ) : filters.user_type === 'provider_group' ? (
+                      <>
+                        <Text size="sm" c="gray.7" mb="md">
+                          Your peer comparison includes <strong>all provider groups/health systems</strong> in {filters.specialty || 'your specialty'} 
+                          nationwide, giving you insight into how your organization performs against similar entities.
+                        </Text>
+
+                        <Grid>
+                          <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Box p="md" style={{ background: 'white', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                              <Title order={5} size="sm" c="blue.7" mb="xs">What's Included in Peer Average:</Title>
+                              <Text size="sm" c="gray.6" component="ul" style={{ margin: 0 }}>
+                                <li>✅ <strong>Other provider groups/health systems</strong> in {filters.specialty || 'your specialty'}</li>
+                                <li>✅ <strong>All geographic locations</strong> (not limited to your states)</li>
+                                <li>✅ <strong>Various organization sizes</strong> (small groups to large health systems)</li>
+                                <li>✅ <strong>Different representation types</strong> (self-represented, law firm represented)</li>
+                                <li>✅ <strong>All quarters in 2024</strong> for comprehensive data</li>
+                                <li>🚫 <strong>Excludes:</strong> Individual solo providers (different business model)</li>
+                              </Text>
+                            </Box>
+                          </Grid.Col>
+                          
+                          <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Box p="md" style={{ background: 'white', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                              <Title order={5} size="sm" c="blue.7" mb="xs">Why This Comparison Matters:</Title>
+                              <Text size="sm" c="gray.6" component="ul" style={{ margin: 0 }}>
+                                <li>📊 <strong>Specialty-focused benchmark:</strong> Compare against similar organizations in your field</li>
+                                <li>🎯 <strong>Operational insights:</strong> See how your group's approach compares to peers</li>
+                                <li>📈 <strong>Strategic positioning:</strong> Understand your competitive position in the market</li>
+                                <li>🔍 <strong>Scale comparison:</strong> Benchmark against organizations of various sizes nationwide</li>
+                              </Text>
+                            </Box>
+                          </Grid.Col>
+                        </Grid>
+                      </>
+                    ) : (
+                      <>
+                        <Text size="sm" c="gray.7" mb="md">
+                          Your peer comparison includes <strong>all individual providers</strong> in {filters.specialty || 'your specialty'} 
+                          nationwide, regardless of location or practice size, giving you specialty-specific market insights.
+                        </Text>
+
+                        <Grid>
+                          <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Box p="md" style={{ background: 'white', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                              <Title order={5} size="sm" c="blue.7" mb="xs">What's Included in Peer Average:</Title>
+                              <Text size="sm" c="gray.6" component="ul" style={{ margin: 0 }}>
+                                <li>✅ <strong>Other individual providers</strong> in {filters.specialty || 'your specialty'}</li>
+                                <li>✅ <strong>All geographic locations</strong> (not limited to your state)</li>
+                                <li>✅ <strong>All practice sizes</strong> (solo practices to large groups)</li>
+                                <li>✅ <strong>Different representation types</strong> (self-represented, law firm represented)</li>
+                                <li>✅ <strong>All quarters in 2024</strong> for comprehensive data</li>
+                                <li>🚫 <strong>Excludes:</strong> Provider groups/health systems (different business model)</li>
+                              </Text>
+                            </Box>
+                          </Grid.Col>
+                          
+                          <Grid.Col span={{ base: 12, md: 6 }}>
+                            <Box p="md" style={{ background: 'white', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                              <Title order={5} size="sm" c="blue.7" mb="xs">Why This Comparison Matters:</Title>
+                              <Text size="sm" c="gray.6" component="ul" style={{ margin: 0 }}>
+                                <li>📊 <strong>Specialty-focused benchmark:</strong> Compare against providers in your medical field</li>
+                                <li>🎯 <strong>Geographic insights:</strong> See how you perform vs. providers nationwide</li>
+                                <li>📈 <strong>Practice optimization:</strong> Identify opportunities based on peer performance</li>
+                                <li>🔍 <strong>Representation value:</strong> Understand if legal representation improves outcomes</li>
+                              </Text>
+                            </Box>
+                          </Grid.Col>
+                        </Grid>
+                      </>
+                    )}
+                  </Collapse>
+
+                  <Group justify="center" mt="md">
+                    <Button 
+                      variant="subtle" 
+                      size="sm"
+                      leftSection={showPeerExplanation ? '▲' : '▼'}
+                      onClick={() => setShowPeerExplanation(!showPeerExplanation)}
+                      c="blue.7"
+                    >
+                      {showPeerExplanation ? 'Hide' : 'Explain'} Peer Benchmarking
+                    </Button>
+                  </Group>
                 </Paper>
 
                 {/* Raw Data Table */}
@@ -1274,6 +1581,7 @@ export default function BenchmarkingDashboard() {
                     </Table.Tbody>
                   </Table>
                 </Paper>
+
               </Stack>
             )}
           </Stack>

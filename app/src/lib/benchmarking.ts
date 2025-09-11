@@ -44,7 +44,7 @@ export class BenchmarkingService {
       }
 
       const result = await response.json()
-      return result.data
+      return result
     } catch (error) {
       console.error('Error in getProviderBenchmark:', error)
       return null
@@ -56,12 +56,17 @@ export class BenchmarkingService {
    */
   static async getPeerBenchmark(filters: BenchmarkFilters): Promise<BenchmarkMetrics | null> {
     try {
-      // For peer comparison, use same specialty but remove geographic and size restrictions
-      const peerFilters = {
-        specialty: filters.specialty,
-        // Remove state and practice_size for broader comparison
-        quarter: filters.quarter || '2024-Q4'
-      }
+      // For peer comparison logic varies by user type
+      const peerFilters = filters.user_type === 'law_firm' 
+        ? {
+            // Law firms: Compare against ENTIRE IDR market (no filters)
+            quarter: filters.quarter || '2024-Q4'
+          }
+        : {
+            // Individual providers/groups: Use same specialty but remove geographic and size restrictions
+            specialty: filters.specialty,
+            quarter: filters.quarter || '2024-Q4'
+          }
 
       const response = await fetch('/api/benchmark', {
         method: 'POST',
@@ -148,6 +153,7 @@ export class BenchmarkingService {
       }
     }
   }
+
 
   /**
    * Get market overview statistics
