@@ -77,11 +77,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Add analytics data to the response
-    let analyticsData: any = {}
+    let analyticsData: Record<string, unknown> = {}
     
     try {
       // Build WHERE conditions for analytics queries based on the same filters
-      let whereConditions: string[] = []
+      const whereConditions: string[] = []
       
       switch (filters.user_type) {
         case 'law_firm':
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
         })
         
         const codesWithMultipleTypes = Array.from(codeTypeCheck.entries())
-          .filter(([code, types]) => types.size > 1)
+          .filter(([, types]) => types.size > 1)
         
         if (codesWithMultipleTypes.length > 0) {
           console.log('🔍 Service codes with multiple types:', codesWithMultipleTypes.slice(0, 3).map(([code, types]) => ({
@@ -245,7 +245,13 @@ export async function POST(request: NextRequest) {
         const actualTotalDisputes = serviceCodeResult.data.length
         console.log('🔍 Actual total disputes (should match this):', actualTotalDisputes)
         
-        serviceCodeResult.data.forEach((row: any) => {
+        serviceCodeResult.data.forEach((row: {
+          service_code: string;
+          type_of_service_code: string;
+          payment_determination_outcome: string;
+          provider_offer_pct_qpa?: number;
+          prevailing_party_offer_pct_qpa?: number;
+        }) => {
           const code = row.service_code
           const codeType = row.type_of_service_code || 'Unknown'
           const key = `${code}|${codeType}` // Use compound key to handle same codes with different types
@@ -360,7 +366,12 @@ export async function POST(request: NextRequest) {
       if (quarterlyResult.data && !quarterlyResult.error) {
         const quarterlyMap = new Map()
         
-        quarterlyResult.data.forEach((row: any) => {
+        quarterlyResult.data.forEach((row: {
+          data_quarter: string;
+          payment_determination_outcome: string;
+          provider_offer_pct_qpa?: number;
+          prevailing_party_offer_pct_qpa?: number;
+        }) => {
           const quarter = row.data_quarter
           if (!quarterlyMap.has(quarter)) {
             quarterlyMap.set(quarter, {

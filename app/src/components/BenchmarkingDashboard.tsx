@@ -144,8 +144,7 @@ export default function BenchmarkingDashboard() {
   const [facilityGroupSuggestions, setFacilityGroupSuggestions] = useState<string[]>([])
   const [facilityGroupLoading, setFacilityGroupLoading] = useState(false)
   const [showPeerExplanation, setShowPeerExplanation] = useState(false)
-  const [analyticsData, setAnalyticsData] = useState<any>(null)
-  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState<Record<string, unknown> | null>(null)
   const [practiceData, setPracticeData] = useState<Array<{
     name: string
     specialty: string
@@ -211,6 +210,7 @@ export default function BenchmarkingDashboard() {
         quarter: urlQuarter || prev.quarter
       }))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
 
@@ -430,8 +430,8 @@ export default function BenchmarkingDashboard() {
       ])
 
       // Extract provider data and analytics from the provider result
-      const providerData = (providerResult as any)?.data || providerResult
-      const analytics = (providerResult as any)?.analytics || null
+      const providerData = (providerResult as Record<string, unknown>)?.data || providerResult
+      const analytics = (providerResult as Record<string, unknown>)?.analytics || null
 
       if (!providerData || !peerData) {
         posthog?.capture('analysis_failed', { reason: 'no_data_found' })
@@ -1195,7 +1195,7 @@ export default function BenchmarkingDashboard() {
                                 <br />
                                 <Text size="xs" c="gray.6">
                                   <strong>By Type:</strong> {' '}
-                                  {Object.entries(analyticsData.service_code_summary.service_code_types).map(([type, stats]: [string, any]) => (
+                                  {Object.entries(analyticsData.service_code_summary.service_code_types).map(([type, stats]: [string, { count: number; cases: number; wins: number }]) => (
                                     `${type}: ${stats.cases.toLocaleString()} cases (${stats.count} codes)`
                                   )).join(' • ')}
                                 </Text>
@@ -1227,7 +1227,15 @@ export default function BenchmarkingDashboard() {
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                          {analyticsData.service_code_analysis.slice(0, 15).map((serviceCode: any, index: number) => (
+                          {analyticsData.service_code_analysis.slice(0, 15).map((serviceCode: {
+                            service_code: string;
+                            type_of_service_code: string;
+                            total_disputes: number;
+                            wins: number;
+                            losses: number;
+                            win_rate: number;
+                            avg_provider_offer_pct: number | null;
+                          }, index: number) => (
                             <Table.Tr key={`${serviceCode.service_code}-${serviceCode.type_of_service_code}-${index}`}>
                               <Table.Td fw={500}>{serviceCode.service_code}</Table.Td>
                               <Table.Td ta="center">
