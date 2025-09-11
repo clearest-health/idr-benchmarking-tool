@@ -1129,6 +1129,40 @@ export default function BenchmarkingDashboard() {
                       </Box>
                     </Grid.Col>
 
+                    {/* Service Code Volume Chart - Full Width */}
+                    {analyticsData?.service_code_analysis && analyticsData.service_code_analysis.length > 0 && (
+                      <Grid.Col span={12}>
+                        <Box>
+                          <Title order={4} size="md" c="gray.7" mb="xs" ta="center">
+                            Top Service Codes by Volume
+                          </Title>
+                          <Text size="xs" c="gray.5" ta="center" mb="sm">
+                            (Total Cases per Code - Top 30 Codes)
+                          </Text>
+                          <Box h={400}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={analyticsData.service_code_analysis.slice(0, 30)}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="service_code" fontSize={10} angle={-45} textAnchor="end" height={80} />
+                                <YAxis fontSize={12} />
+                                <Tooltip 
+                                  formatter={(value, name) => [
+                                    name === 'total_disputes' ? `${value} cases` : value,
+                                    name === 'total_disputes' ? 'Total Cases' : name
+                                  ]}
+                                  labelFormatter={(label, payload) => {
+                                    const item = payload?.[0]?.payload
+                                    return item ? `${item.type_of_service_code}: ${label}` : `Code: ${label}`
+                                  }}
+                                />
+                                <Bar dataKey="total_disputes" fill="#10b981" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </Box>
+                        </Box>
+                      </Grid.Col>
+                    )}
+
                     {/* Service Code Win Rate Chart */}
                     {analyticsData?.service_code_analysis && analyticsData.service_code_analysis.length > 0 && (
                       <Grid.Col span={{ base: 12, md: 6 }}>
@@ -1137,11 +1171,14 @@ export default function BenchmarkingDashboard() {
                             Top Service Codes by Win Rate
                           </Title>
                           <Text size="xs" c="gray.5" ta="center" mb="sm">
-                            (CPT, HCPCS, DRG, N/R codes)
+                            (Ranked by Win Rate ≥50 cases)
                           </Text>
                           <Box h={300}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={analyticsData.service_code_analysis.slice(0, 10)}>
+                              <BarChart data={analyticsData.service_code_analysis
+                                .filter(code => code.total_disputes >= 50)
+                                .sort((a, b) => b.win_rate - a.win_rate)
+                                .slice(0, 15)}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="service_code" fontSize={12} />
                                 <YAxis domain={[0, 100]} fontSize={12} />
@@ -1152,7 +1189,7 @@ export default function BenchmarkingDashboard() {
                                   ]}
                                   labelFormatter={(label, payload) => {
                                     const item = payload?.[0]?.payload
-                                    return item ? `${item.type_of_service_code}: ${label}` : `Code: ${label}`
+                                    return item ? `${item.type_of_service_code}: ${label} (${item.total_disputes} cases)` : `Code: ${label}`
                                   }}
                                 />
                                 <Bar dataKey="win_rate" fill="#4c6ef5" />
@@ -1268,7 +1305,7 @@ export default function BenchmarkingDashboard() {
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                          {analyticsData.service_code_analysis.slice(0, 15).map((serviceCode, index: number) => (
+                          {analyticsData.service_code_analysis.slice(0, 20).map((serviceCode, index: number) => (
                             <Table.Tr key={`${serviceCode.service_code}-${serviceCode.type_of_service_code}-${index}`}>
                               <Table.Td fw={500}>{serviceCode.service_code}</Table.Td>
                               <Table.Td ta="center">

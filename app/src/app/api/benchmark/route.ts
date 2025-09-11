@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
               : null
           }))
           .sort((a, b) => b.total_disputes - a.total_disputes) // Sort by largest volume
-          .slice(0, 20)
+          .slice(0, 100)
           
         // Add summary information including missing service code count
         const missingServiceCodeCount = missingServiceCodeResult?.count || 0
